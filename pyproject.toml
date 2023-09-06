@@ -1,0 +1,22 @@
+[project]
+name = "inotify-toolkit"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Roman Glushko", email = "roman.glushko.m@gmail.com"},
+]
+
+dependencies = [
+]
+
+requires-python = ">=3.7"
+readme = "README.md"
+license = {text = "MIT"}
+
+[build-system]
+requires = ['maturin>=0.14.16,<2']
+build-backend = 'maturin'
+
+[tool.maturin]
+module-name = "inotify_toolkit._inotify_toolkit_lib"
+bindings = 'pyo3'
