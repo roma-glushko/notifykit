@@ -4,16 +4,7 @@ extern crate notify;
 extern crate pyo3;
 
 use pyo3::prelude::*;
-use pyo3::create_exception;
-use pyo3::exceptions::{PyFileNotFoundError, PyOSError, PyPermissionError, PyRuntimeError, PyTypeError};
-
-
-create_exception!(
-    _inotify_toolkit_lib,
-    WatchfilesRustInternalError,
-    PyRuntimeError,
-    "Internal or filesystem error."
-);
+use crate::watcher::{Watcher, WatcherError};
 
 #[pymodule]
 fn _inotify_toolkit_lib(py: Python, m: &PyModule) -> PyResult<()> {
@@ -22,7 +13,9 @@ fn _inotify_toolkit_lib(py: Python, m: &PyModule) -> PyResult<()> {
 
     m.add("__version__", version)?;
 
-    m.add_class::<watcher::Watcher>()?;
+    m.add("WatcherError", py.get_type::<WatcherError>())?;
+
+    m.add_class::<Watcher>()?;
 
     Ok(())
 }
