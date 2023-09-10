@@ -125,28 +125,6 @@ impl Watcher {
         return create_recommended_watcher(debug, poll_delay_ms)
     }
 
-    // fn handle_event(res: NotifyResult<Event>) {
-    //     match res {
-    //         Ok(event) => {
-    //             if let Some(path_buf) = event.paths.first() {
-    //                 let path = match path_buf.to_str() {
-    //                     Some(s) => s.to_string(),
-    //                     None => {
-    //                         return;
-    //                     }
-    //                 };
-    //
-    //                 let change = match event.kind {
-    //
-    //                 };
-    //             }
-    //         }
-    //         Err(e) => {
-    //             // TODO: do something about it
-    //         }
-    //     }
-    // }
-
     pub fn watch(&mut self, paths: Vec<String>, recursive: bool, ignore_permission_errors: bool) -> PyResult<()> {
         let mode = if recursive {
             RecursiveMode::Recursive
@@ -209,11 +187,36 @@ impl Watcher {
         Ok(())
     }
 
-    // pub fn get(slf: &PyCell<Self>) -> PyResult<Self> {
-    //     // TODO: implement
+    // fn handle_event(res: NotifyResult<Event>) {
+    //     match res {
+    //         Ok(event) => {
+    //             if let Some(path_buf) = event.paths.first() {
+    //                 let path = match path_buf.to_str() {
+    //                     Some(s) => s.to_string(),
+    //                     None => {
+    //                         return;
+    //                     }
+    //                 };
+    //
+    //                 let change = match event.kind {
+    //
+    //                 };
+    //             }
+    //         }
+    //         Err(e) => {
+    //             // TODO: do something about it
+    //         }
+    //     }
     // }
 
-    /// https://github.com/PyO3/pyo3/issues/1205#issuecomment-1164096251 for advice on `__enter__`
+    pub fn get(&self) -> PyResult<()> {
+        for event in &self.receiver {
+            println!("{:?}", event);
+        }
+
+        Ok(())
+    }
+
     pub fn __enter__(slf: Py<Self>) -> Py<Self> {
         slf
     }
