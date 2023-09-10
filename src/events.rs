@@ -1,25 +1,110 @@
 use pyo3::prelude::*;
-use notify::event::{EventAttributes as NotifyEventAttrs};
+use notify::event::{EventAttributes as NotifyEventAttrs, AccessMode as NotifyAccessMode, MetadataKind, DataChange};
 
-enum EventTypes {
-    Other  = 0b1000000000000000,
-    Create = 0b0100000000000000,
-    Access = 0b0010000000000000,
-    Remove = 0b0001000000000000,
-    Modify = 0b0000100000000000,
+#[derive(Debug)]
+pub(crate) enum EventType {
+    Create = 0,
+    Access = 1,
+    Remove = 2,
+    Modify = 3,
+    Other  = 4,
 }
 
-enum EventTypeAttributes {
-    File      = 0b0000010000000000,
-    Dir       = 0b0000001000000000,
-    Other     = 0b0000000100000000,
-    Data      = 0b0000000010000000,
-    Metadata  = 0b0000000001000000,
-    Name      = 0b0000000000100000,
+#[derive(Debug)]
+pub(crate) enum ObjectType {
+    File = 0,
+    Dir = 1,
+    Other = 3,
+}
+
+#[derive(Debug)]
+pub(crate) enum AccessType {
+    Read = 0,
+    Open = 1,
+    Close = 2,
+    Other = 3,
+}
+
+#[derive(Debug)]
+pub(crate) enum  AccessMode {
+    Read = 0,
+    Write = 1,
+    Execute = 2,
+    Other = 3,
+}
+
+impl AccessMode {
+    pub(crate) fn from_raw(raw_mode: NotifyAccessMode) -> Option<Self> {
+        return match raw_mode {
+            NotifyAccessMode::Read => Some(Self::Read),
+            NotifyAccessMode::Write => Some(Self::Write),
+            NotifyAccessMode::Execute => Some(Self::Execute),
+            NotifyAccessMode::Other => Some(Self::Other),
+            NotifyAccessMode::Any => None,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) enum  ModifyType {
+    Metadata = 0,
+    Data = 1,
+    Rename = 2,
+    Other = 3,
+}
+
+#[derive(Debug)]
+pub(crate) enum  MetadataType {
+    AccessTime = 0,
+    WriteTime = 1,
+    Ownership = 2,
+    Permissions = 3,
+    Extended = 4,
+    Other = 5,
+}
+
+impl MetadataType {
+    pub(crate) fn from_raw(raw_mode: MetadataKind) -> Option<Self> {
+        return match raw_mode {
+            MetadataKind::AccessTime => Some(Self::AccessTime),
+            MetadataKind::WriteTime => Some(Self::WriteTime),
+            MetadataKind::Ownership => Some(Self::Ownership),
+            MetadataKind::Permissions => Some(Self::Permissions),
+            MetadataKind::Extended => Some(Self::Extended),
+            MetadataKind::Other => Some(Self::Other),
+            MetadataKind::Any => None,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) enum DataChangeType {
+    Content = 0,
+    Size = 1,
+    Other = 2,
+}
+
+impl DataChangeType {
+    pub(crate) fn from_raw(data_changed: DataChange) -> Option<Self> {
+        return match data_changed {
+            DataChange::Content => Some(Self::Content),
+            DataChange::Size => Some(Self::Size),
+            DataChange::Other => Some(Self::Other),
+            DataChange::Any => None,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) enum RenameType {
+    From = 0,
+    To = 1,
+    Both = 2,
+    Other = 3,
 }
 
 #[pyclass]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct EventAttributes {
     pub(crate) tracker: Option<usize>,
     // TODO: add the rest of data
@@ -34,218 +119,187 @@ impl EventAttributes {
     // }
 }
 
-#[pyclass(subclass)]
-pub(crate) struct Event {
-    event_type: u64,
+#[pyclass]
+#[derive(Debug)]
+pub(crate) struct RawEvent {
+    event_type: Option<EventType>,
+
+    object_type: Option<ObjectType>,
+
+    access_type: Option<AccessType>,
+    access_mode: Option<AccessMode>,
+
+    modify_type: Option<ModifyType>,
+    metadata_type: Option<MetadataType>,
+    data_change_type: Option<DataChangeType>,
+    rename_mode: Option<RenameType>,
+
     detected_at_ns: u128,
     path: String,
     attributes: EventAttributes,
 }
 
 #[pymethods]
-impl Event {
-    #[new]
-    fn new(event_type: u64, detected_at_ns: u128, path: String, attributes: EventAttributes) -> Self {
-        Event {
-            event_type,
-            detected_at_ns,
-            path,
-            attributes,
-        }
+impl RawEvent {
+    // #[new]
+    // pub(crate) fn new(event_type: Option<EventType>, object_type: Option<ObjectType>, access_type: Option<AccessType>, access_mode: Option<AccessMode>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> Self {
+    //     RawEvent {
+    //         event_type,
+    //         object_type,
+    //         access_type,
+    //         access_mode,
+    //         // TODO: allow to pass these values
+    //         modify_type: None,
+    //         metadata_type: None,
+    //         data_change_type: None,
+    //         rename_mode: None,
+    //         detected_at_ns,
+    //         path,
+    //         attributes,
+    //     }
+    // }
+}
+
+pub(crate) fn new_access_event(access_type: Option<AccessType>, access_mode: Option<AccessMode>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+    RawEvent {
+        event_type: Some(EventType::Access),
+        object_type: None,
+        access_type,
+        access_mode,
+        modify_type: None,
+        metadata_type: None,
+        data_change_type: None,
+        rename_mode: None,
+        detected_at_ns,
+        path,
+        attributes,
     }
 }
 
-#[pyclass(extends=Event, subclass)]
-struct AccessEvent {
-
-}
-
-#[pymethods]
-impl AccessEvent {
-    #[new]
-    fn new(event_type: u64, detected_at_ns: u128, path: String, attributes: EventAttributes) -> (Self, Event) {
-        (
-            AccessEvent { },
-            Event::new(event_type | EventTypes::Access as u64, detected_at_ns, path, attributes)
-        )
+pub(crate) fn new_create_event(object_type: Option<ObjectType>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+    RawEvent {
+        event_type: Some(EventType::Create),
+        object_type,
+        access_type: None,
+        access_mode: None,
+        modify_type: None,
+        metadata_type: None,
+        data_change_type: None,
+        rename_mode: None,
+        detected_at_ns,
+        path,
+        attributes,
     }
 }
 
-#[pyclass(extends=Event, subclass)]
-pub(crate) struct CreateEvent {
-
-}
-
-#[pymethods]
-impl CreateEvent {
-    #[new]
-    pub(crate) fn new(event_type: u64, detected_at_ns: u128, path: String, attributes: EventAttributes) -> (Self, Event) {
-        (
-            CreateEvent { },
-            Event::new(event_type | EventTypes::Create as u64, detected_at_ns, path, attributes)
-        )
+pub(crate) fn new_remove_event(object_type: Option<ObjectType>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+    RawEvent {
+        event_type: Some(EventType::Remove),
+        object_type,
+        access_type: None,
+        access_mode: None,
+        modify_type: None,
+        metadata_type: None,
+        data_change_type: None,
+        rename_mode: None,
+        detected_at_ns,
+        path,
+        attributes,
     }
 }
 
-#[pyclass(extends=Event, subclass)]
-pub(crate) struct RemoveEvent {
-
-}
-
-#[pymethods]
-impl RemoveEvent {
-    #[new]
-    pub(crate) fn new(event_type: u64, detected_at_ns: u128, path: String, attributes: EventAttributes) -> (Self, Event) {
-        (
-            RemoveEvent { },
-            Event::new(event_type | EventTypes::Remove as u64, detected_at_ns, path, attributes)
-        )
+pub(crate) fn new_modify_event(modify_type: Option<ModifyType>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+    RawEvent {
+        event_type: Some(EventType::Modify),
+        object_type: None,
+        access_type: None,
+        access_mode: None,
+        modify_type,
+        metadata_type: None,
+        data_change_type: None,
+        rename_mode: None,
+        detected_at_ns,
+        path,
+        attributes,
     }
 }
 
-#[pyclass(extends=Event, subclass)]
-pub(crate) struct ModifyEvent {
-}
-
-#[pymethods]
-impl ModifyEvent {
-    #[new]
-    fn new(event_type: u64, detected_at_ns: u128, path: String, attributes: EventAttributes) -> (Self, Event) {
-        (
-            ModifyEvent { },
-            Event::new(event_type | EventTypes::Modify as u64, detected_at_ns, path, attributes)
-        )
+pub(crate) fn new_modify_metadata_event(metadata_type: Option<MetadataType>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+    RawEvent {
+        event_type: Some(EventType::Modify),
+        object_type: None,
+        access_type: None,
+        access_mode: None,
+        modify_type: Some(ModifyType::Metadata),
+        metadata_type,
+        data_change_type: None,
+        rename_mode: None,
+        detected_at_ns,
+        path,
+        attributes,
     }
 }
 
-#[pyclass(extends=Event, subclass)]
-pub(crate) struct OtherEvent {
-
-}
-
-#[pymethods]
-impl OtherEvent {
-    #[new]
-    pub(crate) fn new(detected_at_ns: u128, path: String, attributes: EventAttributes) -> (Self, Event) {
-        (
-            OtherEvent { },
-            Event::new(0 | EventTypes::Other as u64, detected_at_ns, path, attributes)
-        )
+pub(crate) fn new_modify_data_event(data_change_type: Option<DataChangeType>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+    RawEvent {
+        event_type: Some(EventType::Modify),
+        object_type: None,
+        access_type: None,
+        access_mode: None,
+        modify_type: Some(ModifyType::Data),
+        metadata_type: None,
+        data_change_type,
+        rename_mode: None,
+        detected_at_ns,
+        path,
+        attributes,
     }
 }
 
-#[pyclass(extends=CreateEvent)]
-pub(crate) struct FileCreatedEvent {
-}
-
-#[pymethods]
-impl FileCreatedEvent {
-    #[new]
-    pub(crate) fn new(detected_at_ns: u128, path: String, attributes: EventAttributes) -> PyClassInitializer<Self> {
-        let create_event = CreateEvent::new(
-            0 | EventTypeAttributes::File as u64,
-            detected_at_ns,
-            path,
-            attributes,
-        );
-
-        PyClassInitializer::from(create_event).add_subclass(FileCreatedEvent {})
+pub(crate) fn new_rename_event(rename_mode: Option<RenameType>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+    RawEvent {
+        event_type: Some(EventType::Modify),
+        object_type: None,
+        access_type: None,
+        access_mode: None,
+        modify_type: Some(ModifyType::Rename),
+        metadata_type: None,
+        data_change_type: None,
+        rename_mode,
+        detected_at_ns,
+        path,
+        attributes,
     }
 }
 
-#[pyclass(extends=CreateEvent)]
-pub(crate) struct DirCreatedEvent {
-}
-
-#[pymethods]
-impl DirCreatedEvent {
-    #[new]
-    pub(crate) fn new(detected_at_ns: u128, path: String, attributes: EventAttributes) -> PyClassInitializer<Self> {
-        let create_event = CreateEvent::new(
-            0 | EventTypeAttributes::Dir as u64,
-            detected_at_ns,
-            path,
-            attributes,
-        );
-
-        PyClassInitializer::from(create_event).add_subclass(DirCreatedEvent {})
+pub(crate) fn new_other_event(detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+    RawEvent {
+        event_type: Some(EventType::Other),
+        object_type: None,
+        access_type: None,
+        access_mode: None,
+        modify_type: None,
+        metadata_type: None,
+        data_change_type: None,
+        rename_mode: None,
+        detected_at_ns,
+        path,
+        attributes,
     }
 }
 
-#[pyclass(extends=CreateEvent)]
-pub(crate) struct OtherCreatedEvent {
-}
-
-#[pymethods]
-impl OtherCreatedEvent {
-    #[new]
-    pub(crate) fn new(detected_at_ns: u128, path: String, attributes: EventAttributes) -> PyClassInitializer<Self> {
-        let create_event = CreateEvent::new(
-            0 | EventTypeAttributes::Other as u64,
-            detected_at_ns,
-            path,
-            attributes,
-        );
-
-        PyClassInitializer::from(create_event).add_subclass(OtherCreatedEvent {})
+pub(crate) fn new_unknown_event(detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+    RawEvent {
+        event_type: None,
+        object_type: None,
+        access_type: None,
+        access_mode: None,
+        modify_type: None,
+        metadata_type: None,
+        data_change_type: None,
+        rename_mode: None,
+        detected_at_ns,
+        path,
+        attributes,
     }
 }
-
-#[pyclass(extends=RemoveEvent)]
-pub(crate) struct FileRemovedEvent {
-}
-
-#[pymethods]
-impl FileRemovedEvent {
-    #[new]
-    pub(crate) fn new(detected_at_ns: u128, path: String, attributes: EventAttributes) -> PyClassInitializer<Self> {
-        let remove_event = RemoveEvent::new(
-            0 | EventTypeAttributes::File as u64,
-            detected_at_ns,
-            path,
-            attributes,
-        );
-
-        PyClassInitializer::from(remove_event).add_subclass(FileRemovedEvent {})
-    }
-}
-
-#[pyclass(extends=RemoveEvent)]
-pub(crate) struct DirRemovedEvent {
-}
-
-#[pymethods]
-impl DirRemovedEvent {
-    #[new]
-    pub(crate) fn new(detected_at_ns: u128, path: String, mut attributes: EventAttributes) -> PyClassInitializer<Self> {
-        let remove_event = RemoveEvent::new(
-            0 | EventTypeAttributes::Dir as u64,
-            detected_at_ns,
-            path,
-            attributes,
-        );
-
-        PyClassInitializer::from(remove_event).add_subclass(DirRemovedEvent {})
-    }
-}
-
-#[pyclass(extends=RemoveEvent)]
-pub(crate) struct OtherRemovedEvent {
-}
-
-#[pymethods]
-impl OtherRemovedEvent {
-    #[new]
-    pub(crate) fn new(detected_at_ns: u128, path: String, mut attributes: EventAttributes) -> PyClassInitializer<Self> {
-        let remove_event = RemoveEvent::new(
-            0 | EventTypeAttributes::Other as u64,
-            detected_at_ns,
-            path,
-            attributes,
-        );
-
-        PyClassInitializer::from(remove_event).add_subclass(OtherRemovedEvent {})
-    }
-}
-
-
