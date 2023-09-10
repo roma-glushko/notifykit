@@ -1,7 +1,27 @@
 from os import PathLike
-from typing import Sequence
+from typing import Sequence, Protocol
 
 from inotify_toolkit._inotify_toolkit_lib import Watcher
+
+
+class NotifierT(Protocol):
+    def watch(self, paths: Sequence[PathLike], recursive: bool = True, ignore_permission_errors: bool = False) -> None:
+        ...
+
+    def unwatch(self, paths: Sequence[str]) -> None:
+        ...
+
+    def __enter__(self) -> 'Notifier':
+        ...
+
+    def __exit__(self, *args, **kwargs) -> None:
+        ...
+
+    def __aiter__(self) -> 'Notifier':
+        ...
+
+    def __iter__(self) -> 'Notifier':
+        ...
 
 
 class Notifier:

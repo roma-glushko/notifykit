@@ -3,17 +3,15 @@ extern crate pyo3;
 
 use std::path::Path;
 use std::sync::mpsc::Receiver;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use std::io::ErrorKind as IOErrorKind;
 use pyo3::exceptions::{PyFileNotFoundError, PyException, PyPermissionError, PyOSError};
 use pyo3::prelude::*;
 
 // use notify::event::{Event, EventKind, ModifyKind, RenameMode};
-use notify::event::{Event};
-use notify::{
-    Config as NotifyConfig, ErrorKind as NotifyErrorKind, PollWatcher, RecommendedWatcher, RecursiveMode,
-    Result as NotifyResult, Watcher as NotifyWatcher,
-};
+use notify::event::{Event as NotifyEvent, CreateKind, RemoveKind, AccessKind, ModifyKind, MetadataKind, DataChange, RenameMode};
+use notify::{Config as NotifyConfig, ErrorKind as NotifyErrorKind, EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Result as NotifyResult, Watcher as NotifyWatcher};
+use crate::events::{EventAttributes, DirCreatedEvent, DirRemovedEvent, FileCreatedEvent, FileRemovedEvent, OtherCreatedEvent, OtherEvent, OtherRemovedEvent, Event, RemoveEvent, CreateEvent};
 
 pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
 
@@ -27,8 +25,12 @@ enum WatcherType {
 #[pyclass]
 pub(crate) struct Watcher {
     debug: bool,
-    receiver: Receiver<NotifyResult<Event>>,
+    receiver: Receiver<NotifyResult<NotifyEvent>>,
     watcher: WatcherType,
+}
+
+fn get_current_time_ns() -> u128 {
+    SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos()
 }
 
 fn create_poll_watcher(debug: bool, poll_delay_ms: u64) -> PyResult<Watcher> {
@@ -187,30 +189,84 @@ impl Watcher {
         Ok(())
     }
 
-    // fn handle_event(res: NotifyResult<Event>) {
-    //     match res {
-    //         Ok(event) => {
-    //             if let Some(path_buf) = event.paths.first() {
-    //                 let path = match path_buf.to_str() {
-    //                     Some(s) => s.to_string(),
-    //                     None => {
-    //                         return;
-    //                     }
-    //                 };
-    //
-    //                 let change = match event.kind {
-    //
-    //                 };
-    //             }
-    //         }
-    //         Err(e) => {
-    //             // TODO: do something about it
-    //         }
-    //     }
-    // }
-
     pub fn get(&self) -> PyResult<()> {
-        for event in &self.receiver {
+        for result in &self.receiver {
+            let event = match result {
+                Ok(raw_event) => {
+                    println!("{:?}", raw_event);
+
+                    let detected_at_ns = get_current_time_ns();
+
+                    if let Some(path_buf) = raw_event.paths.first() {
+                        let path = match path_buf.to_str() {
+                            Some(s) => s.to_string(),
+                            None => {
+                                continue;
+                            }
+                        };
+
+                        let attrs = EventAttributes{tracker: None}; // TODO: fill it with raw_event.attrs info
+
+                        let event = match raw_event.kind {
+                            EventKind::Create(create_kind) => match create_kind {
+                                CreateKind::File => FileCreatedEvent::new(detected_at_ns, path, attrs),
+                                CreateKind::Folder => DirCreatedEvent::new(detected_at_ns, path, attrs),
+                                CreateKind::Other => OtherCreatedEvent::new(detected_at_ns, path, attrs),
+                                CreateKind::Any => CreateEvent::new(0, detected_at_ns, path, attrs),
+                            },
+                            EventKind::Remove(remove_kind) => match remove_kind {
+                                RemoveKind::File => FileRemovedEvent::new(detected_at_ns, path, attrs),
+                                RemoveKind::Folder => DirRemovedEvent::new(detected_at_ns, path, attrs),
+                                RemoveKind::Other => OtherRemovedEvent::new(detected_at_ns, path, attrs),
+                                RemoveKind::Any => RemoveEvent::new(0, detected_at_ns, path, attrs),
+                            },
+                            EventKind::Access(access_kind) => match access_kind {
+                                AccessKind::Open(access_mode) => {}
+                                AccessKind::Read => {},
+                                AccessKind::Close(access_mode) => {}
+                                AccessKind::Other => {
+
+                                },
+                                AccessKind::Any => {
+
+                                }
+                            },
+                            EventKind::Modify(modify_kind) => match modify_kind {
+                                ModifyKind::Metadata(metadata_kind) => match metadata_kind {
+                                    MetadataKind::AccessTime => {},
+                                    MetadataKind::WriteTime => {},
+                                    MetadataKind::Ownership => {},
+                                    MetadataKind::Permissions => {},
+                                    MetadataKind::Extended => {},
+                                    MetadataKind::Other => {},
+                                    MetadataKind::Any => {},
+                                }
+                                ModifyKind::Data(data_changed) => match data_changed {
+                                    DataChange::Content => {},
+                                    DataChange::Size => {},
+                                    DataChange::Other => {},
+                                    DataChange::Any => {},
+                                }
+                                ModifyKind::Name(rename_mode) => match rename_mode {
+                                    RenameMode::From=> {},
+                                    RenameMode::To => {},
+                                    RenameMode::Both => {},
+                                    RenameMode::Other => {},
+                                    RenameMode::Any => {},
+                                }
+                                ModifyKind::Other => {},
+                                ModifyKind::Any => {},
+                            },
+                            EventKind::Other => OtherEvent::new(detected_at_ns, path, attrs),
+                            EventKind::Any => {}
+                        };
+                    }
+                }
+                Err(e) => {
+                    // TODO: do something about it
+                }
+            };
+
             println!("{:?}", event);
         }
 

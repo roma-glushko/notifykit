@@ -1,7 +1,7 @@
 [project]
 name = "inotify-toolkit"
 version = "0.1.0"
-description = ""
+description = "A modern efficient Python toolkit for building applications that need to watch filesystem changes"
 authors = [
     {name = "Roman Glushko", email = "roman.glushko.m@gmail.com"},
 ]
