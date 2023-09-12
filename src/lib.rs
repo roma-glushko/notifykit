@@ -1,12 +1,12 @@
-mod watcher;
 mod events;
+mod watcher;
 
 extern crate notify;
 extern crate pyo3;
 
-use pyo3::prelude::*;
 use crate::events::RawEvent;
 use crate::watcher::{Watcher, WatcherError};
+use pyo3::prelude::*;
 
 #[pymodule]
 fn _inotify_toolkit_lib(py: Python, m: &PyModule) -> PyResult<()> {

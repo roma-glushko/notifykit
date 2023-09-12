@@ -1,5 +1,7 @@
+use notify::event::{
+    AccessMode as NotifyAccessMode, DataChange, EventAttributes as NotifyEventAttrs, MetadataKind,
+};
 use pyo3::prelude::*;
-use notify::event::{EventAttributes as NotifyEventAttrs, AccessMode as NotifyAccessMode, MetadataKind, DataChange};
 
 #[derive(Debug)]
 pub(crate) enum EventType {
@@ -7,7 +9,7 @@ pub(crate) enum EventType {
     Access = 1,
     Remove = 2,
     Modify = 3,
-    Other  = 4,
+    Other = 4,
 }
 
 #[derive(Debug)]
@@ -26,7 +28,7 @@ pub(crate) enum AccessType {
 }
 
 #[derive(Debug)]
-pub(crate) enum  AccessMode {
+pub(crate) enum AccessMode {
     Read = 0,
     Write = 1,
     Execute = 2,
@@ -41,12 +43,12 @@ impl AccessMode {
             NotifyAccessMode::Execute => Some(Self::Execute),
             NotifyAccessMode::Other => Some(Self::Other),
             NotifyAccessMode::Any => None,
-        }
+        };
     }
 }
 
 #[derive(Debug)]
-pub(crate) enum  ModifyType {
+pub(crate) enum ModifyType {
     Metadata = 0,
     Data = 1,
     Rename = 2,
@@ -54,7 +56,7 @@ pub(crate) enum  ModifyType {
 }
 
 #[derive(Debug)]
-pub(crate) enum  MetadataType {
+pub(crate) enum MetadataType {
     AccessTime = 0,
     WriteTime = 1,
     Ownership = 2,
@@ -73,7 +75,7 @@ impl MetadataType {
             MetadataKind::Extended => Some(Self::Extended),
             MetadataKind::Other => Some(Self::Other),
             MetadataKind::Any => None,
-        }
+        };
     }
 }
 
@@ -91,7 +93,7 @@ impl DataChangeType {
             DataChange::Size => Some(Self::Size),
             DataChange::Other => Some(Self::Other),
             DataChange::Any => None,
-        }
+        };
     }
 }
 
@@ -160,7 +162,13 @@ impl RawEvent {
     // }
 }
 
-pub(crate) fn new_access_event(access_type: Option<AccessType>, access_mode: Option<AccessMode>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+pub(crate) fn new_access_event(
+    access_type: Option<AccessType>,
+    access_mode: Option<AccessMode>,
+    detected_at_ns: u128,
+    path: String,
+    attributes: EventAttributes,
+) -> RawEvent {
     RawEvent {
         event_type: Some(EventType::Access),
         object_type: None,
@@ -176,7 +184,12 @@ pub(crate) fn new_access_event(access_type: Option<AccessType>, access_mode: Opt
     }
 }
 
-pub(crate) fn new_create_event(object_type: Option<ObjectType>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+pub(crate) fn new_create_event(
+    object_type: Option<ObjectType>,
+    detected_at_ns: u128,
+    path: String,
+    attributes: EventAttributes,
+) -> RawEvent {
     RawEvent {
         event_type: Some(EventType::Create),
         object_type,
@@ -192,7 +205,12 @@ pub(crate) fn new_create_event(object_type: Option<ObjectType>, detected_at_ns: 
     }
 }
 
-pub(crate) fn new_remove_event(object_type: Option<ObjectType>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+pub(crate) fn new_remove_event(
+    object_type: Option<ObjectType>,
+    detected_at_ns: u128,
+    path: String,
+    attributes: EventAttributes,
+) -> RawEvent {
     RawEvent {
         event_type: Some(EventType::Remove),
         object_type,
@@ -208,7 +226,12 @@ pub(crate) fn new_remove_event(object_type: Option<ObjectType>, detected_at_ns: 
     }
 }
 
-pub(crate) fn new_modify_event(modify_type: Option<ModifyType>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+pub(crate) fn new_modify_event(
+    modify_type: Option<ModifyType>,
+    detected_at_ns: u128,
+    path: String,
+    attributes: EventAttributes,
+) -> RawEvent {
     RawEvent {
         event_type: Some(EventType::Modify),
         object_type: None,
@@ -224,7 +247,12 @@ pub(crate) fn new_modify_event(modify_type: Option<ModifyType>, detected_at_ns: 
     }
 }
 
-pub(crate) fn new_modify_metadata_event(metadata_type: Option<MetadataType>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+pub(crate) fn new_modify_metadata_event(
+    metadata_type: Option<MetadataType>,
+    detected_at_ns: u128,
+    path: String,
+    attributes: EventAttributes,
+) -> RawEvent {
     RawEvent {
         event_type: Some(EventType::Modify),
         object_type: None,
@@ -240,7 +268,12 @@ pub(crate) fn new_modify_metadata_event(metadata_type: Option<MetadataType>, det
     }
 }
 
-pub(crate) fn new_modify_data_event(data_change_type: Option<DataChangeType>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+pub(crate) fn new_modify_data_event(
+    data_change_type: Option<DataChangeType>,
+    detected_at_ns: u128,
+    path: String,
+    attributes: EventAttributes,
+) -> RawEvent {
     RawEvent {
         event_type: Some(EventType::Modify),
         object_type: None,
@@ -256,7 +289,12 @@ pub(crate) fn new_modify_data_event(data_change_type: Option<DataChangeType>, de
     }
 }
 
-pub(crate) fn new_rename_event(rename_mode: Option<RenameType>, detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+pub(crate) fn new_rename_event(
+    rename_mode: Option<RenameType>,
+    detected_at_ns: u128,
+    path: String,
+    attributes: EventAttributes,
+) -> RawEvent {
     RawEvent {
         event_type: Some(EventType::Modify),
         object_type: None,
@@ -272,7 +310,11 @@ pub(crate) fn new_rename_event(rename_mode: Option<RenameType>, detected_at_ns: 
     }
 }
 
-pub(crate) fn new_other_event(detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+pub(crate) fn new_other_event(
+    detected_at_ns: u128,
+    path: String,
+    attributes: EventAttributes,
+) -> RawEvent {
     RawEvent {
         event_type: Some(EventType::Other),
         object_type: None,
@@ -288,7 +330,11 @@ pub(crate) fn new_other_event(detected_at_ns: u128, path: String, attributes: Ev
     }
 }
 
-pub(crate) fn new_unknown_event(detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
+pub(crate) fn new_unknown_event(
+    detected_at_ns: u128,
+    path: String,
+    attributes: EventAttributes,
+) -> RawEvent {
     RawEvent {
         event_type: None,
         object_type: None,

@@ -1,16 +1,29 @@
 extern crate notify;
 extern crate pyo3;
 
+use pyo3::exceptions::{PyException, PyFileNotFoundError, PyOSError, PyPermissionError};
+use pyo3::prelude::*;
+use std::collections::VecDeque;
+use std::io::ErrorKind as IOErrorKind;
 use std::path::Path;
 use std::sync::mpsc::{Receiver, Sender};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
-use std::io::ErrorKind as IOErrorKind;
-use pyo3::exceptions::{PyFileNotFoundError, PyException, PyPermissionError, PyOSError};
-use pyo3::prelude::*;
 
-use notify::event::{Event as NotifyEvent, CreateKind, RemoveKind, AccessKind, ModifyKind, MetadataKind, DataChange, RenameMode};
-use notify::{Config as NotifyConfig, ErrorKind as NotifyErrorKind, EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Result as NotifyResult, Watcher as NotifyWatcher};
-use crate::events::{EventAttributes, RawEvent, EventType, ObjectType, AccessType, AccessMode, MetadataType, ModifyType, DataChangeType, RenameType, new_create_event, new_remove_event, new_access_event, new_modify_metadata_event, new_modify_data_event, new_rename_event, new_modify_event, new_other_event, new_unknown_event};
+use crate::events::{
+    new_access_event, new_create_event, new_modify_data_event, new_modify_event,
+    new_modify_metadata_event, new_other_event, new_remove_event, new_rename_event,
+    new_unknown_event, AccessMode, AccessType, DataChangeType, EventAttributes, EventType,
+    MetadataType, ModifyType, ObjectType, RawEvent, RenameType,
+};
+use notify::event::{
+    AccessKind, CreateKind, DataChange, Event as NotifyEvent, MetadataKind, ModifyKind, RemoveKind,
+    RenameMode,
+};
+use notify::{
+    Config as NotifyConfig, ErrorKind as NotifyErrorKind, EventKind, PollWatcher,
+    RecommendedWatcher, RecursiveMode, Result as NotifyResult, Watcher as NotifyWatcher,
+};
 
 pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
 
@@ -25,13 +38,15 @@ enum WatcherType {
 pub(crate) struct Watcher {
     debug: bool,
     event_receiver: Receiver<NotifyResult<NotifyEvent>>,
-    message_sender: Sender<RawEvent>,
-    message_receiver: Receiver<RawEvent>,
+    events: Arc<Mutex<VecDeque<RawEvent>>>,
     watcher: WatcherType,
 }
 
 fn get_current_time_ns() -> u128 {
-    SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos()
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos()
 }
 
 fn create_poll_watcher(debug: bool, poll_delay_ms: u64) -> PyResult<Watcher> {
@@ -41,16 +56,18 @@ fn create_poll_watcher(debug: bool, poll_delay_ms: u64) -> PyResult<Watcher> {
 
     let watcher = match PollWatcher::new(event_sender, config) {
         Ok(watcher) => watcher,
-        Err(e) => return Err(WatcherError::new_err(format!("Error creating poll watcher: {}", e)))
+        Err(e) => {
+            return Err(WatcherError::new_err(format!(
+                "Error creating poll watcher: {}",
+                e
+            )))
+        }
     };
 
-    let (message_sender, message_receiver) = std::sync::mpsc::channel();
-
-    Ok(Watcher{
+    Ok(Watcher {
         debug,
         event_receiver,
-        message_sender,
-        message_receiver,
+        events: Arc::new(Mutex::new(VecDeque::new())),
         watcher: WatcherType::Poll(watcher),
     })
 }
@@ -58,10 +75,7 @@ fn create_poll_watcher(debug: bool, poll_delay_ms: u64) -> PyResult<Watcher> {
 fn create_recommended_watcher(debug: bool, poll_delay_ms: u64) -> PyResult<Watcher> {
     let (event_sender, event_receiver) = std::sync::mpsc::channel();
 
-    let watcher = match RecommendedWatcher::new(
-        event_sender,
-        NotifyConfig::default(),
-    ) {
+    let watcher = match RecommendedWatcher::new(event_sender, NotifyConfig::default()) {
         Ok(watcher) => watcher,
         Err(error) => {
             return match &error.kind {
@@ -76,26 +90,27 @@ fn create_recommended_watcher(debug: bool, poll_delay_ms: u64) -> PyResult<Watch
                             );
                         }
 
-                        return create_poll_watcher(debug, poll_delay_ms)
+                        return create_poll_watcher(debug, poll_delay_ms);
                     }
 
-                    Err(WatcherError::new_err(format!("Error creating recommended watcher: {}", error)))
+                    Err(WatcherError::new_err(format!(
+                        "Error creating recommended watcher: {}",
+                        error
+                    )))
                 }
-                _ => {
-                    Err(WatcherError::new_err(format!("Error creating recommended watcher: {}", error)))
-                }
-            }
+                _ => Err(WatcherError::new_err(format!(
+                    "Error creating recommended watcher: {}",
+                    error
+                ))),
+            };
         }
     };
 
-    let (message_sender, message_receiver) = std::sync::mpsc::channel();
-
-    Ok(Watcher{
+    Ok(Watcher {
         debug,
         event_receiver,
-        message_sender,
-        message_receiver,
-        watcher: WatcherType::Recommended(watcher)
+        events: Arc::new(Mutex::new(VecDeque::new())),
+        watcher: WatcherType::Recommended(watcher),
     })
 }
 
@@ -124,19 +139,20 @@ fn map_notify_error(notify_error: notify::Error) -> PyErr {
 #[pymethods]
 impl Watcher {
     #[new]
-    fn py_new(
-        debug: bool,
-        force_polling: bool,
-        poll_delay_ms: u64,
-    ) -> PyResult<Self> {
-       if force_polling {
-           return create_poll_watcher(debug, poll_delay_ms)
-       }
+    fn py_new(debug: bool, force_polling: bool, poll_delay_ms: u64) -> PyResult<Self> {
+        if force_polling {
+            return create_poll_watcher(debug, poll_delay_ms);
+        }
 
-        return create_recommended_watcher(debug, poll_delay_ms)
+        return create_recommended_watcher(debug, poll_delay_ms);
     }
 
-    pub fn watch(&mut self, paths: Vec<String>, recursive: bool, ignore_permission_errors: bool) -> PyResult<()> {
+    pub fn watch(
+        &mut self,
+        paths: Vec<String>,
+        recursive: bool,
+        ignore_permission_errors: bool,
+    ) -> PyResult<()> {
         let mode = if recursive {
             RecursiveMode::Recursive
         } else {
@@ -198,8 +214,8 @@ impl Watcher {
         Ok(())
     }
 
-    fn _listen_to_events(&self) -> PyResult<()> {
-        for result in &self.event_receiver {
+    fn _listen_to_events(&self, receiver: Receiver<NotifyResult<NotifyEvent>>) -> PyResult<()> {
+        for result in receiver {
             match result {
                 Ok(raw_event) => {
                     println!("{:?}", raw_event);
@@ -220,42 +236,141 @@ impl Watcher {
 
                         let event = match raw_event.kind {
                             EventKind::Create(create_kind) => match create_kind {
-                                CreateKind::File => new_create_event(Some(ObjectType::File), detected_at_ns, path, attrs),
-                                CreateKind::Folder => new_create_event(Some(ObjectType::Dir), detected_at_ns, path, attrs),
-                                CreateKind::Other => new_create_event(Some(ObjectType::Other), detected_at_ns, path, attrs),
-                                CreateKind::Any => new_create_event(None, detected_at_ns, path, attrs),
+                                CreateKind::File => new_create_event(
+                                    Some(ObjectType::File),
+                                    detected_at_ns,
+                                    path,
+                                    attrs,
+                                ),
+                                CreateKind::Folder => new_create_event(
+                                    Some(ObjectType::Dir),
+                                    detected_at_ns,
+                                    path,
+                                    attrs,
+                                ),
+                                CreateKind::Other => new_create_event(
+                                    Some(ObjectType::Other),
+                                    detected_at_ns,
+                                    path,
+                                    attrs,
+                                ),
+                                CreateKind::Any => {
+                                    new_create_event(None, detected_at_ns, path, attrs)
+                                }
                             },
                             EventKind::Remove(remove_kind) => match remove_kind {
-                                RemoveKind::File => new_remove_event(Some(ObjectType::File), detected_at_ns, path, attrs),
-                                RemoveKind::Folder => new_remove_event(Some(ObjectType::Dir), detected_at_ns, path, attrs),
-                                RemoveKind::Other => new_remove_event(Some(ObjectType::Other), detected_at_ns, path, attrs),
-                                RemoveKind::Any => new_remove_event(None, detected_at_ns, path, attrs),
+                                RemoveKind::File => new_remove_event(
+                                    Some(ObjectType::File),
+                                    detected_at_ns,
+                                    path,
+                                    attrs,
+                                ),
+                                RemoveKind::Folder => new_remove_event(
+                                    Some(ObjectType::Dir),
+                                    detected_at_ns,
+                                    path,
+                                    attrs,
+                                ),
+                                RemoveKind::Other => new_remove_event(
+                                    Some(ObjectType::Other),
+                                    detected_at_ns,
+                                    path,
+                                    attrs,
+                                ),
+                                RemoveKind::Any => {
+                                    new_remove_event(None, detected_at_ns, path, attrs)
+                                }
                             },
                             EventKind::Access(access_kind) => match access_kind {
-                                AccessKind::Open(access_mode) => new_access_event(Some(AccessType::Open), AccessMode::from_raw(access_mode), detected_at_ns, path, attrs),
-                                AccessKind::Read => new_access_event(Some(AccessType::Read), None, detected_at_ns, path, attrs),
-                                AccessKind::Close(access_mode) => new_access_event(Some(AccessType::Close), AccessMode::from_raw(access_mode), detected_at_ns, path, attrs),
-                                AccessKind::Other => new_access_event(Some(AccessType::Other), None, detected_at_ns, path, attrs),
-                                AccessKind::Any => new_access_event(None, None, detected_at_ns, path, attrs),
+                                AccessKind::Open(access_mode) => new_access_event(
+                                    Some(AccessType::Open),
+                                    AccessMode::from_raw(access_mode),
+                                    detected_at_ns,
+                                    path,
+                                    attrs,
+                                ),
+                                AccessKind::Read => new_access_event(
+                                    Some(AccessType::Read),
+                                    None,
+                                    detected_at_ns,
+                                    path,
+                                    attrs,
+                                ),
+                                AccessKind::Close(access_mode) => new_access_event(
+                                    Some(AccessType::Close),
+                                    AccessMode::from_raw(access_mode),
+                                    detected_at_ns,
+                                    path,
+                                    attrs,
+                                ),
+                                AccessKind::Other => new_access_event(
+                                    Some(AccessType::Other),
+                                    None,
+                                    detected_at_ns,
+                                    path,
+                                    attrs,
+                                ),
+                                AccessKind::Any => {
+                                    new_access_event(None, None, detected_at_ns, path, attrs)
+                                }
                             },
                             EventKind::Modify(modify_kind) => match modify_kind {
-                                ModifyKind::Metadata(metadata_kind) => new_modify_metadata_event(MetadataType::from_raw(metadata_kind), detected_at_ns, path, attrs),
-                                ModifyKind::Data(data_changed) => new_modify_data_event(DataChangeType::from_raw(data_changed), detected_at_ns, path, attrs),
+                                ModifyKind::Metadata(metadata_kind) => new_modify_metadata_event(
+                                    MetadataType::from_raw(metadata_kind),
+                                    detected_at_ns,
+                                    path,
+                                    attrs,
+                                ),
+                                ModifyKind::Data(data_changed) => new_modify_data_event(
+                                    DataChangeType::from_raw(data_changed),
+                                    detected_at_ns,
+                                    path,
+                                    attrs,
+                                ),
                                 ModifyKind::Name(rename_mode) => match rename_mode {
-                                    RenameMode::From => new_rename_event(Some(RenameType::From), detected_at_ns, path, attrs),
-                                    RenameMode::To => new_rename_event(Some(RenameType::To), detected_at_ns, path, attrs),
-                                    RenameMode::Both => new_rename_event(Some(RenameType::Both), detected_at_ns, path, attrs),  // TODO: parse the second path
-                                    RenameMode::Other => new_rename_event(Some(RenameType::Other), detected_at_ns, path, attrs),
-                                    RenameMode::Any => new_rename_event(None, detected_at_ns, path, attrs),
+                                    RenameMode::From => new_rename_event(
+                                        Some(RenameType::From),
+                                        detected_at_ns,
+                                        path,
+                                        attrs,
+                                    ),
+                                    RenameMode::To => new_rename_event(
+                                        Some(RenameType::To),
+                                        detected_at_ns,
+                                        path,
+                                        attrs,
+                                    ),
+                                    RenameMode::Both => new_rename_event(
+                                        Some(RenameType::Both),
+                                        detected_at_ns,
+                                        path,
+                                        attrs,
+                                    ), // TODO: parse the second path
+                                    RenameMode::Other => new_rename_event(
+                                        Some(RenameType::Other),
+                                        detected_at_ns,
+                                        path,
+                                        attrs,
+                                    ),
+                                    RenameMode::Any => {
+                                        new_rename_event(None, detected_at_ns, path, attrs)
+                                    }
+                                },
+                                ModifyKind::Other => new_modify_event(
+                                    Some(ModifyType::Other),
+                                    detected_at_ns,
+                                    path,
+                                    attrs,
+                                ),
+                                ModifyKind::Any => {
+                                    new_modify_event(None, detected_at_ns, path, attrs)
                                 }
-                                ModifyKind::Other => new_modify_event(Some(ModifyType::Other), detected_at_ns, path, attrs),
-                                ModifyKind::Any => new_modify_event(None, detected_at_ns, path, attrs),
                             },
                             EventKind::Other => new_other_event(detected_at_ns, path, attrs),
                             EventKind::Any => new_unknown_event(detected_at_ns, path, attrs),
                         };
 
-                        let _ = self.message_sender.send(event);
+                        self.events.lock().unwrap().push_back(event);
                     }
                 }
                 Err(e) => {
@@ -267,16 +382,17 @@ impl Watcher {
         Ok(())
     }
 
-    pub fn get(&self) -> PyResult<()> {
-        Ok(())
+    pub fn get(&self) -> PyResult<Option<RawEvent>> {
+        Ok(self.events.lock().unwrap().pop_front())
     }
 
     pub fn __enter__(&self, slf: Py<Self>) -> Py<Self> {
+        let receiver = self.event_receiver;
+
         std::thread::Builder::new()
             .name("filesystem_watcher_thread".to_string())
-            .spawn(move || {
-                self._listen_to_events()
-            }).unwrap();
+            .spawn(move || self._listen_to_events(receiver))
+            .unwrap();
 
         slf
     }
