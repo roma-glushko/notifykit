@@ -9,7 +9,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
-use crossbeam_channel::{unbounded, Sender, Receiver};
+use crossbeam_channel::{unbounded, Receiver, RecvError, Sender};
 use crossbeam_utils::thread as crossbeam_thread;
 
 use crate::events::{
@@ -224,192 +224,203 @@ impl Watcher {
     }
 
     fn _listen_to_events(&self) -> PyResult<()> {
-        println!("_listen_to_events");
-
-        for result in &self.raw_event_receiver {
-            match result {
-                Ok(raw_event) => {
-                    if self.debug {
-                        println!("{:?}", raw_event);
-                    }
-
-                    let detected_at_ns = get_current_time_ns();
-
-                    if let Some(path_buf) = raw_event.paths.first() {
-                        let path = match path_buf.to_str() {
-                            Some(s) => s.to_string(),
-                            None => {
-                                continue;
+        Python::with_gil(|py| {
+            py.allow_threads(|| {
+                println!("_listen_to_events");
+                for result in &self.raw_event_receiver {
+                    match result {
+                        Ok(raw_event) => {
+                            if self.debug {
+                                println!("{:?}", raw_event);
                             }
-                        };
 
-                        let attrs = EventAttributes { tracker: None }; // TODO: fill it with raw_event.attrs info
+                            let detected_at_ns = get_current_time_ns();
 
-                        // TODO: find more readable way to remap event data
-
-                        let event = match raw_event.kind {
-                            EventKind::Create(create_kind) => match create_kind {
-                                CreateKind::File => new_create_event(
-                                    Some(ObjectType::File),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                CreateKind::Folder => new_create_event(
-                                    Some(ObjectType::Dir),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                CreateKind::Other => new_create_event(
-                                    Some(ObjectType::Other),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                CreateKind::Any => {
-                                    new_create_event(None, detected_at_ns, path, attrs)
-                                }
-                            },
-                            EventKind::Remove(remove_kind) => match remove_kind {
-                                RemoveKind::File => new_remove_event(
-                                    Some(ObjectType::File),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                RemoveKind::Folder => new_remove_event(
-                                    Some(ObjectType::Dir),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                RemoveKind::Other => new_remove_event(
-                                    Some(ObjectType::Other),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                RemoveKind::Any => {
-                                    new_remove_event(None, detected_at_ns, path, attrs)
-                                }
-                            },
-                            EventKind::Access(access_kind) => match access_kind {
-                                AccessKind::Open(access_mode) => new_access_event(
-                                    Some(AccessType::Open),
-                                    AccessMode::from_raw(access_mode),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                AccessKind::Read => new_access_event(
-                                    Some(AccessType::Read),
-                                    None,
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                AccessKind::Close(access_mode) => new_access_event(
-                                    Some(AccessType::Close),
-                                    AccessMode::from_raw(access_mode),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                AccessKind::Other => new_access_event(
-                                    Some(AccessType::Other),
-                                    None,
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                AccessKind::Any => {
-                                    new_access_event(None, None, detected_at_ns, path, attrs)
-                                }
-                            },
-                            EventKind::Modify(modify_kind) => match modify_kind {
-                                ModifyKind::Metadata(metadata_kind) => new_modify_metadata_event(
-                                    MetadataType::from_raw(metadata_kind),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                ModifyKind::Data(data_changed) => new_modify_data_event(
-                                    DataChangeType::from_raw(data_changed),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                ModifyKind::Name(rename_mode) => match rename_mode {
-                                    RenameMode::From => new_rename_event(
-                                        Some(RenameType::From),
-                                        detected_at_ns,
-                                        path,
-                                        attrs,
-                                    ),
-                                    RenameMode::To => new_rename_event(
-                                        Some(RenameType::To),
-                                        detected_at_ns,
-                                        path,
-                                        attrs,
-                                    ),
-                                    RenameMode::Both => new_rename_event(
-                                        Some(RenameType::Both),
-                                        detected_at_ns,
-                                        path,
-                                        attrs,
-                                    ), // TODO: parse the second path
-                                    RenameMode::Other => new_rename_event(
-                                        Some(RenameType::Other),
-                                        detected_at_ns,
-                                        path,
-                                        attrs,
-                                    ),
-                                    RenameMode::Any => {
-                                        new_rename_event(None, detected_at_ns, path, attrs)
+                            if let Some(path_buf) = raw_event.paths.first() {
+                                let path = match path_buf.to_str() {
+                                    Some(s) => s.to_string(),
+                                    None => {
+                                        continue;
                                     }
-                                },
-                                ModifyKind::Other => new_modify_event(
-                                    Some(ModifyType::Other),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                ModifyKind::Any => {
-                                    new_modify_event(None, detected_at_ns, path, attrs)
-                                }
-                            },
-                            EventKind::Other => new_other_event(detected_at_ns, path, attrs),
-                            EventKind::Any => new_unknown_event(detected_at_ns, path, attrs),
-                        };
+                                };
 
-                        self.events_sender.send(event).unwrap();
-                    }
+                                let attrs = EventAttributes { tracker: None }; // TODO: fill it with raw_event.attrs info
+
+                                // TODO: find more readable way to remap event data
+
+                                let event = match raw_event.kind {
+                                    EventKind::Create(create_kind) => match create_kind {
+                                        CreateKind::File => new_create_event(
+                                            Some(ObjectType::File),
+                                            detected_at_ns,
+                                            path,
+                                            attrs,
+                                        ),
+                                        CreateKind::Folder => new_create_event(
+                                            Some(ObjectType::Dir),
+                                            detected_at_ns,
+                                            path,
+                                            attrs,
+                                        ),
+                                        CreateKind::Other => new_create_event(
+                                            Some(ObjectType::Other),
+                                            detected_at_ns,
+                                            path,
+                                            attrs,
+                                        ),
+                                        CreateKind::Any => {
+                                            new_create_event(None, detected_at_ns, path, attrs)
+                                        }
+                                    },
+                                    EventKind::Remove(remove_kind) => match remove_kind {
+                                        RemoveKind::File => new_remove_event(
+                                            Some(ObjectType::File),
+                                            detected_at_ns,
+                                            path,
+                                            attrs,
+                                        ),
+                                        RemoveKind::Folder => new_remove_event(
+                                            Some(ObjectType::Dir),
+                                            detected_at_ns,
+                                            path,
+                                            attrs,
+                                        ),
+                                        RemoveKind::Other => new_remove_event(
+                                            Some(ObjectType::Other),
+                                            detected_at_ns,
+                                            path,
+                                            attrs,
+                                        ),
+                                        RemoveKind::Any => {
+                                            new_remove_event(None, detected_at_ns, path, attrs)
+                                        }
+                                    },
+                                    EventKind::Access(access_kind) => match access_kind {
+                                        AccessKind::Open(access_mode) => new_access_event(
+                                            Some(AccessType::Open),
+                                            AccessMode::from_raw(access_mode),
+                                            detected_at_ns,
+                                            path,
+                                            attrs,
+                                        ),
+                                        AccessKind::Read => new_access_event(
+                                            Some(AccessType::Read),
+                                            None,
+                                            detected_at_ns,
+                                            path,
+                                            attrs,
+                                        ),
+                                        AccessKind::Close(access_mode) => new_access_event(
+                                            Some(AccessType::Close),
+                                            AccessMode::from_raw(access_mode),
+                                            detected_at_ns,
+                                            path,
+                                            attrs,
+                                        ),
+                                        AccessKind::Other => new_access_event(
+                                            Some(AccessType::Other),
+                                            None,
+                                            detected_at_ns,
+                                            path,
+                                            attrs,
+                                        ),
+                                        AccessKind::Any => new_access_event(
+                                            None,
+                                            None,
+                                            detected_at_ns,
+                                            path,
+                                            attrs,
+                                        ),
+                                    },
+                                    EventKind::Modify(modify_kind) => match modify_kind {
+                                        ModifyKind::Metadata(metadata_kind) => {
+                                            new_modify_metadata_event(
+                                                MetadataType::from_raw(metadata_kind),
+                                                detected_at_ns,
+                                                path,
+                                                attrs,
+                                            )
+                                        }
+                                        ModifyKind::Data(data_changed) => new_modify_data_event(
+                                            DataChangeType::from_raw(data_changed),
+                                            detected_at_ns,
+                                            path,
+                                            attrs,
+                                        ),
+                                        ModifyKind::Name(rename_mode) => match rename_mode {
+                                            RenameMode::From => new_rename_event(
+                                                Some(RenameType::From),
+                                                detected_at_ns,
+                                                path,
+                                                attrs,
+                                            ),
+                                            RenameMode::To => new_rename_event(
+                                                Some(RenameType::To),
+                                                detected_at_ns,
+                                                path,
+                                                attrs,
+                                            ),
+                                            RenameMode::Both => new_rename_event(
+                                                Some(RenameType::Both),
+                                                detected_at_ns,
+                                                path,
+                                                attrs,
+                                            ), // TODO: parse the second path
+                                            RenameMode::Other => new_rename_event(
+                                                Some(RenameType::Other),
+                                                detected_at_ns,
+                                                path,
+                                                attrs,
+                                            ),
+                                            RenameMode::Any => {
+                                                new_rename_event(None, detected_at_ns, path, attrs)
+                                            }
+                                        },
+                                        ModifyKind::Other => new_modify_event(
+                                            Some(ModifyType::Other),
+                                            detected_at_ns,
+                                            path,
+                                            attrs,
+                                        ),
+                                        ModifyKind::Any => {
+                                            new_modify_event(None, detected_at_ns, path, attrs)
+                                        }
+                                    },
+                                    EventKind::Other => {
+                                        new_other_event(detected_at_ns, path, attrs)
+                                    }
+                                    EventKind::Any => {
+                                        new_unknown_event(detected_at_ns, path, attrs)
+                                    }
+                                };
+
+                                self.events_sender.send(event).unwrap();
+                            }
+                        }
+                        Err(e) => {
+                            // TODO: do something about it
+                        }
+                    };
                 }
-                Err(e) => {
-                    // TODO: do something about it
-                }
-            };
-        }
+            });
+        });
 
         Ok(())
     }
 
-    pub fn get(&self) -> PyResult<Option<RawEvent>> {
-        for event in &self.events_receiver {
-            return Ok(Some(event));
-        }
-
-        Ok(None)
+    pub fn get(&self, py: Python<'_>) -> PyResult<RawEvent> {
+        return Ok(py.allow_threads(|| self.events_receiver.recv()).unwrap());
     }
 
     pub fn __enter__(&self, py: Python<'_>) -> PyResult<()> {
-        crossbeam_thread::scope(|scope| {
-            scope.spawn(move |_| self._listen_to_events());
-            println!("scope.spawn() left");
-        }).unwrap();
-
-        println!("__enter__ left");
+        py.allow_threads(|| {
+            crossbeam_thread::scope(|scope| {
+                scope.spawn(move |_| self._listen_to_events());
+                println!("spawn() after")
+            })
+            .unwrap();
+            println!("scope() after")
+        });
 
         Ok(())
     }
