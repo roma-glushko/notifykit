@@ -6,9 +6,11 @@ use pyo3::prelude::*;
 use std::collections::VecDeque;
 use std::io::ErrorKind as IOErrorKind;
 use std::path::Path;
-use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
+
+use crossbeam_channel::{unbounded, Sender, Receiver};
+use crossbeam_utils::thread as crossbeam_thread;
 
 use crate::events::{
     new_access_event, new_create_event, new_modify_data_event, new_modify_event,
@@ -37,8 +39,9 @@ enum WatcherType {
 #[pyclass]
 pub(crate) struct Watcher {
     debug: bool,
-    event_receiver: Receiver<NotifyResult<NotifyEvent>>,
-    events: Arc<Mutex<VecDeque<RawEvent>>>,
+    raw_event_receiver: Receiver<NotifyResult<NotifyEvent>>,
+    events_sender: Sender<RawEvent>,
+    events_receiver: Receiver<RawEvent>,
     watcher: WatcherType,
 }
 
@@ -50,11 +53,11 @@ fn get_current_time_ns() -> u128 {
 }
 
 fn create_poll_watcher(debug: bool, poll_delay_ms: u64) -> PyResult<Watcher> {
-    let (event_sender, event_receiver) = std::sync::mpsc::channel();
+    let (raw_event_sender, raw_event_receiver) = unbounded();
     let delay = Duration::from_millis(poll_delay_ms);
     let config = NotifyConfig::default().with_poll_interval(delay);
 
-    let watcher = match PollWatcher::new(event_sender, config) {
+    let watcher = match PollWatcher::new(raw_event_sender, config) {
         Ok(watcher) => watcher,
         Err(e) => {
             return Err(WatcherError::new_err(format!(
@@ -64,18 +67,21 @@ fn create_poll_watcher(debug: bool, poll_delay_ms: u64) -> PyResult<Watcher> {
         }
     };
 
+    let (events_sender, events_receiver) = unbounded();
+
     Ok(Watcher {
         debug,
-        event_receiver,
-        events: Arc::new(Mutex::new(VecDeque::new())),
+        raw_event_receiver,
+        events_sender,
+        events_receiver,
         watcher: WatcherType::Poll(watcher),
     })
 }
 
 fn create_recommended_watcher(debug: bool, poll_delay_ms: u64) -> PyResult<Watcher> {
-    let (event_sender, event_receiver) = std::sync::mpsc::channel();
+    let (raw_event_sender, raw_event_receiver) = unbounded();
 
-    let watcher = match RecommendedWatcher::new(event_sender, NotifyConfig::default()) {
+    let watcher = match RecommendedWatcher::new(raw_event_sender, NotifyConfig::default()) {
         Ok(watcher) => watcher,
         Err(error) => {
             return match &error.kind {
@@ -106,10 +112,13 @@ fn create_recommended_watcher(debug: bool, poll_delay_ms: u64) -> PyResult<Watch
         }
     };
 
+    let (events_sender, events_receiver) = unbounded();
+
     Ok(Watcher {
         debug,
-        event_receiver,
-        events: Arc::new(Mutex::new(VecDeque::new())),
+        raw_event_receiver,
+        events_sender,
+        events_receiver,
         watcher: WatcherType::Recommended(watcher),
     })
 }
@@ -214,11 +223,15 @@ impl Watcher {
         Ok(())
     }
 
-    fn _listen_to_events(&self, receiver: Receiver<NotifyResult<NotifyEvent>>) -> PyResult<()> {
-        for result in receiver {
+    fn _listen_to_events(&self) -> PyResult<()> {
+        println!("_listen_to_events");
+
+        for result in &self.raw_event_receiver {
             match result {
                 Ok(raw_event) => {
-                    println!("{:?}", raw_event);
+                    if self.debug {
+                        println!("{:?}", raw_event);
+                    }
 
                     let detected_at_ns = get_current_time_ns();
 
@@ -370,7 +383,7 @@ impl Watcher {
                             EventKind::Any => new_unknown_event(detected_at_ns, path, attrs),
                         };
 
-                        self.events.lock().unwrap().push_back(event);
+                        self.events_sender.send(event).unwrap();
                     }
                 }
                 Err(e) => {
@@ -383,18 +396,22 @@ impl Watcher {
     }
 
     pub fn get(&self) -> PyResult<Option<RawEvent>> {
-        Ok(self.events.lock().unwrap().pop_front())
+        for event in &self.events_receiver {
+            return Ok(Some(event));
+        }
+
+        Ok(None)
     }
 
-    pub fn __enter__(&self, slf: Py<Self>) -> Py<Self> {
-        let receiver = self.event_receiver;
+    pub fn __enter__(&self, py: Python<'_>) -> PyResult<()> {
+        crossbeam_thread::scope(|scope| {
+            scope.spawn(move |_| self._listen_to_events());
+            println!("scope.spawn() left");
+        }).unwrap();
 
-        std::thread::Builder::new()
-            .name("filesystem_watcher_thread".to_string())
-            .spawn(move || self._listen_to_events(receiver))
-            .unwrap();
+        println!("__enter__ left");
 
-        slf
+        Ok(())
     }
 
     pub fn close(&mut self) {
@@ -402,7 +419,8 @@ impl Watcher {
     }
 
     pub fn __exit__(&mut self, _exc_type: PyObject, _exc_value: PyObject, _traceback: PyObject) {
-        self.close();
+        // TODO: add start/shutdown methods
+        // self.close();
     }
 
     pub fn __repr__(&self) -> PyResult<String> {

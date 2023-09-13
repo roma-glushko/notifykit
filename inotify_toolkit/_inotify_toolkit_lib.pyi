@@ -1,6 +1,6 @@
 from enum import IntEnum
 from types import TracebackType
-from typing import List
+from typing import List, Optional
 
 """
 The lib version
@@ -52,7 +52,7 @@ class Watcher:
         """
         ...
 
-    def get(self) -> None:
+    def get(self) -> RawEvent:
         ...
 
     def close(self) -> None:
@@ -67,6 +67,25 @@ class Watcher:
         ...
 
 # Main Event Groups
+
+class EventType(IntEnum):
+    CREATE = 0
+    ACCESS = 1
+    REMOVE = 2
+    MODIFY = 3
+    OTHER = 4
+
+class ObjectType(IntEnum):
+    FILE = 0
+    DIR = 1
+    OTHER = 3
+
+class RawEvent:
+    event_type: Optional[EventType]
+    object_type: Optional[ObjectType]
+
+    detected_at_ns: int
+    path: str
 
 class AccessEvent(Event):
     """

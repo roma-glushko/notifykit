@@ -1,7 +1,7 @@
 from os import PathLike
 from typing import Sequence, Protocol
 
-from inotify_toolkit._inotify_toolkit_lib import Watcher
+from inotify_toolkit._inotify_toolkit_lib import Watcher, RawEvent
 
 
 class NotifierT(Protocol):
@@ -64,5 +64,6 @@ class Notifier:
     # async def __anext__(self) -> Event:
     #     ...
     #
-    # def __next__(self) -> Event:
-    #     ...
+
+    def __next__(self) -> RawEvent:
+        yield self._watcher.get()

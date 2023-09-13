@@ -97,6 +97,7 @@ name = "inotify_toolkit_lib"
 version = "0.0.0"
 dependencies = [
  "crossbeam-channel",
+ "crossbeam-utils",
  "notify",
  "pyo3",
 ]
