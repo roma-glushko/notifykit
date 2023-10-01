@@ -1,6 +1,4 @@
-use notify::event::{
-    AccessMode as NotifyAccessMode, DataChange, EventAttributes as NotifyEventAttrs, MetadataKind,
-};
+use notify::event::{AccessMode as NotifyAccessMode, DataChange, EventAttributes as NotifyEventAttrs, MetadataKind};
 use pyo3::prelude::*;
 
 #[derive(Debug)]
@@ -310,11 +308,7 @@ pub(crate) fn new_rename_event(
     }
 }
 
-pub(crate) fn new_other_event(
-    detected_at_ns: u128,
-    path: String,
-    attributes: EventAttributes,
-) -> RawEvent {
+pub(crate) fn new_other_event(detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
     RawEvent {
         event_type: Some(EventType::Other),
         object_type: None,
@@ -330,11 +324,7 @@ pub(crate) fn new_other_event(
     }
 }
 
-pub(crate) fn new_unknown_event(
-    detected_at_ns: u128,
-    path: String,
-    attributes: EventAttributes,
-) -> RawEvent {
+pub(crate) fn new_unknown_event(detected_at_ns: u128, path: String, attributes: EventAttributes) -> RawEvent {
     RawEvent {
         event_type: None,
         object_type: None,
