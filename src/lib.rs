@@ -22,14 +22,20 @@ impl WatcherWrapper {
         return Ok(WatcherWrapper { watcher: watcher? });
     }
 
-    pub fn __enter__(&mut self, slf: Py<Self>) -> Py<Self> {
-        self.watcher.start();
-
-        slf
+    pub fn get(&self) -> PyResult<RawEvent> {
+        self.watcher.get()
     }
 
-    pub fn __exit__(&mut self, _exc_type: PyObject, _exc_value: PyObject, _traceback: PyObject) {
-        self.watcher.stop()
+    pub fn start(&mut self) -> PyResult<()> {
+        self.watcher.start();
+
+        Ok(())
+    }
+
+    pub fn stop(&mut self) -> PyResult<()> {
+        self.watcher.stop();
+
+        Ok(())
     }
 
     pub fn watch(&mut self, paths: Vec<String>, recursive: bool, ignore_permission_errors: bool) -> PyResult<()> {

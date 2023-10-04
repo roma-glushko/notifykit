@@ -23,7 +23,7 @@ class Event:
     def __init__(self, event_type: int, detected_at_ns: int, path: str) -> None:
         ...
 
-class Watcher:
+class WatcherWrapper:
     """
     Watcher listens to filesystem events and retrieves them for the Notifier.
     By default, it tries to pick the most appropriate watching strategy that depends on your OS.
@@ -60,10 +60,10 @@ class Watcher:
         """
         ...
 
-    def __enter__(self) -> None:
+    def start(self) -> None:
         ...
 
-    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+    def stop(self) -> None:
         ...
 
 # Main Event Groups

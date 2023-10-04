@@ -4,11 +4,15 @@ extern crate pyo3;
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyOSError, PyPermissionError};
 use pyo3::prelude::*;
 use std::io::ErrorKind as IOErrorKind;
+use std::ops::Deref;
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime};
 
-use crossbeam_channel::{unbounded, Receiver, RecvError, Sender};
+use crossbeam_channel::{unbounded, Receiver, RecvError, RecvTimeoutError, Sender};
+use crossbeam_utils::atomic::AtomicConsume;
 
 use crate::events::{
     new_access_event, new_create_event, new_modify_data_event, new_modify_event, new_modify_metadata_event,
@@ -19,8 +23,8 @@ use notify::event::{
     AccessKind, CreateKind, DataChange, Event as NotifyEvent, MetadataKind, ModifyKind, RemoveKind, RenameMode,
 };
 use notify::{
-    Config as NotifyConfig, ErrorKind as NotifyErrorKind, EventKind, PollWatcher, RecommendedWatcher, RecursiveMode,
-    Result as NotifyResult, Watcher as NotifyWatcher,
+    Config as NotifyConfig, ErrorKind as NotifyErrorKind, Event, EventKind, PollWatcher, RecommendedWatcher,
+    RecursiveMode, Result as NotifyResult, Watcher as NotifyWatcher,
 };
 
 pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
@@ -31,7 +35,6 @@ type NotificationReceiver = Receiver<NotifyResult<NotifyEvent>>;
 
 #[derive(Debug)]
 enum WatcherType {
-    None,
     Poll(PollWatcher),
     Recommended(RecommendedWatcher),
 }
@@ -43,6 +46,8 @@ pub(crate) struct Watcher {
     event_receiver: EventReceiver,
     event_sender: EventSender,
     watcher: WatcherType,
+    listen_thread: Option<JoinHandle<()>>,
+    stop_listening: Arc<AtomicBool>,
 }
 
 impl Watcher {
@@ -72,6 +77,8 @@ impl Watcher {
             event_receiver,
             event_sender,
             watcher: WatcherType::Poll(watcher),
+            listen_thread: None,
+            stop_listening: Arc::new(AtomicBool::new(false)),
         })
     }
 
@@ -117,6 +124,8 @@ impl Watcher {
             event_receiver,
             event_sender,
             watcher: WatcherType::Recommended(watcher),
+            listen_thread: None,
+            stop_listening: Arc::new(AtomicBool::new(false)),
         })
     }
 
@@ -140,7 +149,6 @@ impl Watcher {
             let result = match self.watcher {
                 WatcherType::Recommended(ref mut w) => w.watch(path, mode),
                 WatcherType::Poll(ref mut w) => w.watch(path, mode),
-                WatcherType::None => return Err(WatcherError::new_err("Watcher is closed")),
             };
 
             match result {
@@ -167,7 +175,6 @@ impl Watcher {
             let result = match self.watcher {
                 WatcherType::Recommended(ref mut w) => w.unwatch(path),
                 WatcherType::Poll(ref mut w) => w.unwatch(path),
-                WatcherType::None => return Err(WatcherError::new_err("Watcher is closed")),
             };
 
             match result {
@@ -185,124 +192,65 @@ impl Watcher {
         Ok(())
     }
 
-    fn listen_to_events<'a>(&'a self) -> PyResult<()> {
-        for result in &self.notification_receiver {
-            match result {
-                Ok(raw_event) => {
-                    if self.debug {
-                        println!("{:?}", raw_event);
-                    }
+    fn create_event(path: String, notification: &Event) -> RawEvent {
+        let detected_at_ns = Self::get_current_time_ns();
 
-                    let detected_at_ns = Self::get_current_time_ns();
+        // TODO: fill it with raw_event.attrs info
+        let attrs = EventAttributes { tracker: None };
 
-                    if let Some(path_buf) = raw_event.paths.first() {
-                        let path = match path_buf.to_str() {
-                            Some(s) => s.to_string(),
-                            None => {
-                                continue;
-                            }
-                        };
-
-                        // TODO: fill it with raw_event.attrs info
-                        let attrs = EventAttributes { tracker: None };
-
-                        // TODO: find more readable way to remap event data
-                        let event = match raw_event.kind {
-                            EventKind::Create(create_kind) => match create_kind {
-                                CreateKind::File => {
-                                    new_create_event(Some(ObjectType::File), detected_at_ns, path, attrs)
-                                }
-                                CreateKind::Folder => {
-                                    new_create_event(Some(ObjectType::Dir), detected_at_ns, path, attrs)
-                                }
-                                CreateKind::Other => {
-                                    new_create_event(Some(ObjectType::Other), detected_at_ns, path, attrs)
-                                }
-                                CreateKind::Any => new_create_event(None, detected_at_ns, path, attrs),
-                            },
-                            EventKind::Remove(remove_kind) => match remove_kind {
-                                RemoveKind::File => {
-                                    new_remove_event(Some(ObjectType::File), detected_at_ns, path, attrs)
-                                }
-                                RemoveKind::Folder => {
-                                    new_remove_event(Some(ObjectType::Dir), detected_at_ns, path, attrs)
-                                }
-                                RemoveKind::Other => {
-                                    new_remove_event(Some(ObjectType::Other), detected_at_ns, path, attrs)
-                                }
-                                RemoveKind::Any => new_remove_event(None, detected_at_ns, path, attrs),
-                            },
-                            EventKind::Access(access_kind) => match access_kind {
-                                AccessKind::Open(access_mode) => new_access_event(
-                                    Some(AccessType::Open),
-                                    AccessMode::from_raw(access_mode),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                AccessKind::Read => {
-                                    new_access_event(Some(AccessType::Read), None, detected_at_ns, path, attrs)
-                                }
-                                AccessKind::Close(access_mode) => new_access_event(
-                                    Some(AccessType::Close),
-                                    AccessMode::from_raw(access_mode),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                AccessKind::Other => {
-                                    new_access_event(Some(AccessType::Other), None, detected_at_ns, path, attrs)
-                                }
-                                AccessKind::Any => new_access_event(None, None, detected_at_ns, path, attrs),
-                            },
-                            EventKind::Modify(modify_kind) => match modify_kind {
-                                ModifyKind::Metadata(metadata_kind) => new_modify_metadata_event(
-                                    MetadataType::from_raw(metadata_kind),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                ModifyKind::Data(data_changed) => new_modify_data_event(
-                                    DataChangeType::from_raw(data_changed),
-                                    detected_at_ns,
-                                    path,
-                                    attrs,
-                                ),
-                                ModifyKind::Name(rename_mode) => match rename_mode {
-                                    RenameMode::From => {
-                                        new_rename_event(Some(RenameType::From), detected_at_ns, path, attrs)
-                                    }
-                                    RenameMode::To => {
-                                        new_rename_event(Some(RenameType::To), detected_at_ns, path, attrs)
-                                    }
-                                    RenameMode::Both => {
-                                        new_rename_event(Some(RenameType::Both), detected_at_ns, path, attrs)
-                                    } // TODO: parse the second path
-                                    RenameMode::Other => {
-                                        new_rename_event(Some(RenameType::Other), detected_at_ns, path, attrs)
-                                    }
-                                    RenameMode::Any => new_rename_event(None, detected_at_ns, path, attrs),
-                                },
-                                ModifyKind::Other => {
-                                    new_modify_event(Some(ModifyType::Other), detected_at_ns, path, attrs)
-                                }
-                                ModifyKind::Any => new_modify_event(None, detected_at_ns, path, attrs),
-                            },
-                            EventKind::Other => new_other_event(detected_at_ns, path, attrs),
-                            EventKind::Any => new_unknown_event(detected_at_ns, path, attrs),
-                        };
-
-                        self.event_sender.send(event).unwrap();
-                    }
+        // TODO: find more readable way to remap event data
+        return match notification.kind {
+            EventKind::Create(create_kind) => match create_kind {
+                CreateKind::File => new_create_event(Some(ObjectType::File), detected_at_ns, path, attrs),
+                CreateKind::Folder => new_create_event(Some(ObjectType::Dir), detected_at_ns, path, attrs),
+                CreateKind::Other => new_create_event(Some(ObjectType::Other), detected_at_ns, path, attrs),
+                CreateKind::Any => new_create_event(None, detected_at_ns, path, attrs),
+            },
+            EventKind::Remove(remove_kind) => match remove_kind {
+                RemoveKind::File => new_remove_event(Some(ObjectType::File), detected_at_ns, path, attrs),
+                RemoveKind::Folder => new_remove_event(Some(ObjectType::Dir), detected_at_ns, path, attrs),
+                RemoveKind::Other => new_remove_event(Some(ObjectType::Other), detected_at_ns, path, attrs),
+                RemoveKind::Any => new_remove_event(None, detected_at_ns, path, attrs),
+            },
+            EventKind::Access(access_kind) => match access_kind {
+                AccessKind::Open(access_mode) => new_access_event(
+                    Some(AccessType::Open),
+                    AccessMode::from_raw(access_mode),
+                    detected_at_ns,
+                    path,
+                    attrs,
+                ),
+                AccessKind::Read => new_access_event(Some(AccessType::Read), None, detected_at_ns, path, attrs),
+                AccessKind::Close(access_mode) => new_access_event(
+                    Some(AccessType::Close),
+                    AccessMode::from_raw(access_mode),
+                    detected_at_ns,
+                    path,
+                    attrs,
+                ),
+                AccessKind::Other => new_access_event(Some(AccessType::Other), None, detected_at_ns, path, attrs),
+                AccessKind::Any => new_access_event(None, None, detected_at_ns, path, attrs),
+            },
+            EventKind::Modify(modify_kind) => match modify_kind {
+                ModifyKind::Metadata(metadata_kind) => {
+                    new_modify_metadata_event(MetadataType::from_raw(metadata_kind), detected_at_ns, path, attrs)
                 }
-                Err(e) => {
-                    // TODO: do something about it
-                    eprintln!("error: {:?}", e);
+                ModifyKind::Data(data_changed) => {
+                    new_modify_data_event(DataChangeType::from_raw(data_changed), detected_at_ns, path, attrs)
                 }
-            };
-        }
-
-        Ok(())
+                ModifyKind::Name(rename_mode) => match rename_mode {
+                    RenameMode::From => new_rename_event(Some(RenameType::From), detected_at_ns, path, attrs),
+                    RenameMode::To => new_rename_event(Some(RenameType::To), detected_at_ns, path, attrs),
+                    RenameMode::Both => new_rename_event(Some(RenameType::Both), detected_at_ns, path, attrs), // TODO: parse the second path
+                    RenameMode::Other => new_rename_event(Some(RenameType::Other), detected_at_ns, path, attrs),
+                    RenameMode::Any => new_rename_event(None, detected_at_ns, path, attrs),
+                },
+                ModifyKind::Other => new_modify_event(Some(ModifyType::Other), detected_at_ns, path, attrs),
+                ModifyKind::Any => new_modify_event(None, detected_at_ns, path, attrs),
+            },
+            EventKind::Other => new_other_event(detected_at_ns, path, attrs),
+            EventKind::Any => new_unknown_event(detected_at_ns, path, attrs),
+        };
     }
 
     pub fn get(&self) -> PyResult<RawEvent> {
@@ -310,11 +258,60 @@ impl Watcher {
     }
 
     pub fn start(&mut self) {
-        let _thread_handle = std::thread::spawn(move || self.listen_to_events());
+        let notification_receiver = self.notification_receiver.clone();
+        let event_sender = self.event_sender.clone();
+        let stop_listening = self.stop_listening.clone();
+        let debug = self.debug;
+
+        let listen_thread = std::thread::spawn(move || {
+            while !stop_listening.load(Ordering::Relaxed) {
+                let timeout = Duration::from_millis(400);
+                let timed_out_result = &notification_receiver.recv_timeout(timeout);
+
+                match timed_out_result {
+                    Ok(notification_result) => match notification_result {
+                        Ok(notification) => {
+                            if debug {
+                                println!("{:?}", notification);
+                            }
+
+                            if let Some(path_buf) = notification.paths.first() {
+                                let path = match path_buf.to_str() {
+                                    Some(s) => s.to_string(),
+                                    None => {
+                                        continue;
+                                    }
+                                };
+
+                                let raw_event = Self::create_event(path, notification);
+
+                                event_sender.send(raw_event).unwrap();
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("error: {:?}", e);
+                        }
+                    },
+                    Err(e) => match e {
+                        RecvTimeoutError::Timeout => (),
+                        RecvTimeoutError::Disconnected => {
+                            eprintln!("error: {:?}", e);
+                        }
+                    },
+                };
+            }
+        });
+
+        self.listen_thread = Some(listen_thread)
     }
 
     pub fn stop(&mut self) {
-        self.watcher = WatcherType::None;
+        if let Some(listen_thread) = self.listen_thread.take() {
+            self.stop_listening.store(true, Ordering::Relaxed);
+
+            listen_thread.join().unwrap();
+            self.listen_thread = None;
+        }
     }
 
     pub fn repr(&self) -> String {
