@@ -6,7 +6,9 @@ extern crate pyo3;
 
 use crate::events::RawEvent;
 use crate::watcher::{Watcher, WatcherError};
+use pyo3::exceptions::PyKeyboardInterrupt;
 use pyo3::prelude::*;
+use std::time::Duration;
 
 #[pyclass]
 pub(crate) struct WatcherWrapper {
@@ -22,12 +24,27 @@ impl WatcherWrapper {
         return Ok(WatcherWrapper { watcher: watcher? });
     }
 
-    pub fn get(&self) -> PyResult<RawEvent> {
-        self.watcher.get()
+    pub fn get(&self, py: Python) -> PyResult<Option<RawEvent>> {
+        loop {
+            match py.check_signals() {
+                Ok(_) => (),
+                Err(_) => {
+                    // self.clear();
+                    return Err(PyKeyboardInterrupt::new_err("KeyboardInterrupt"));
+                }
+            };
+
+            let result = self.watcher.get(Duration::from_millis(200));
+
+            match result {
+                Ok(e) => return Ok(e),
+                Err(_) => continue,
+            }
+        }
     }
 
-    pub fn start(&mut self) -> PyResult<()> {
-        self.watcher.start();
+    pub fn start(&mut self, py: Python) -> PyResult<()> {
+        py.allow_threads(|| self.watcher.start());
 
         Ok(())
     }

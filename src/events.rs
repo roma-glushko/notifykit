@@ -122,21 +122,21 @@ impl EventAttributes {
 #[pyclass]
 #[derive(Debug)]
 pub(crate) struct RawEvent {
-    event_type: Option<EventType>,
+    pub(crate) event_type: Option<EventType>,
 
-    object_type: Option<ObjectType>,
+    pub(crate) object_type: Option<ObjectType>,
 
-    access_type: Option<AccessType>,
-    access_mode: Option<AccessMode>,
+    pub(crate) access_type: Option<AccessType>,
+    pub(crate) access_mode: Option<AccessMode>,
 
-    modify_type: Option<ModifyType>,
-    metadata_type: Option<MetadataType>,
-    data_change_type: Option<DataChangeType>,
-    rename_mode: Option<RenameType>,
+    pub(crate) modify_type: Option<ModifyType>,
+    pub(crate) metadata_type: Option<MetadataType>,
+    pub(crate) data_change_type: Option<DataChangeType>,
+    pub(crate) rename_mode: Option<RenameType>,
 
-    detected_at_ns: u128,
-    path: String,
-    attributes: EventAttributes,
+    pub(crate) detected_at_ns: u128,
+    pub(crate) path: String,
+    pub(crate) attributes: EventAttributes,
 }
 
 #[pymethods]
@@ -158,6 +158,10 @@ impl RawEvent {
     //         attributes,
     //     }
     // }
+
+    fn __repr__(&self) -> String {
+        return format!("RawEvent ({:#?})", self);
+    }
 }
 
 pub(crate) fn new_access_event(

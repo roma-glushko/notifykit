@@ -60,9 +60,10 @@ class Notifier:
     def __iter__(self) -> 'Notifier':
         return self
 
-    # async def __anext__(self) -> Event:
-    #     ...
-    #
-
     def __next__(self) -> RawEvent:
-        yield self._watcher.get()
+        event = self._watcher.get()
+
+        if event is None:
+            raise StopIteration
+
+        return event

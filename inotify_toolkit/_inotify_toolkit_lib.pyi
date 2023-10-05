@@ -52,7 +52,7 @@ class WatcherWrapper:
         """
         ...
 
-    def get(self) -> RawEvent:
+    def get(self) -> Optional[RawEvent]:
         ...
 
     def close(self) -> None:

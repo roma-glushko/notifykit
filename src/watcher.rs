@@ -253,8 +253,12 @@ impl Watcher {
         };
     }
 
-    pub fn get(&self) -> PyResult<RawEvent> {
-        return Ok(self.event_receiver.recv().unwrap());
+    pub fn get(&self, timeout: Duration) -> Result<Option<RawEvent>, RecvTimeoutError> {
+        if self.event_receiver.len() == 0 && self.listen_thread.is_none() {
+            return Ok(None);
+        }
+
+        return Ok(Some(self.event_receiver.recv_timeout(timeout)?));
     }
 
     pub fn start(&mut self) {

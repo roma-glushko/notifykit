@@ -8,11 +8,8 @@ def watch(watched_dir: Path) -> None:
     with Notifier() as notifier:
         notifier.watch([watched_dir])
 
-        event = notifier.get()
-        event
-
-        # for event in notifier:
-        #     print(event)
+        for event in notifier:
+            print(event)
 
 
 if __name__ == "__main__":
