@@ -5,10 +5,7 @@
     <em>👀 A cross-platform filesystem watcher toolkit for Python</em>
 </p>
 
-# 👀 notifykit
-
-notifykit is a set of components for building modern Python applications 
-with a need for watching filesystem events efficiently.
+**notifykit** is a set of components for building modern Python applications with a need for watching filesystem events efficiently.
 
 > [!Warning]
 > notify-tookit is under active development right now
