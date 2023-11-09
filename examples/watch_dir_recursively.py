@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from inotify_toolkit import Notifier
+from inotifykit import Notifier
 
 
 def watch(watched_dir: Path) -> None:

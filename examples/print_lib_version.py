@@ -1,4 +1,4 @@
-from inotify_toolkit import VERSION
+from inotifykit import VERSION
 
 if __name__ == "__main__":
-    print(f"Inotify Toolkit Ver: {VERSION}")
+    print(f"inotifykit ver: {VERSION}")
