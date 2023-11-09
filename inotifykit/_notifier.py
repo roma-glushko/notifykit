@@ -1,7 +1,7 @@
 from os import PathLike
 from typing import Sequence, Protocol
 
-from inotify_toolkit._inotify_toolkit_lib import WatcherWrapper, RawEvent
+from inotifykit._inotify_toolkit_lib import WatcherWrapper, RawEvent
 
 
 class NotifierT(Protocol):

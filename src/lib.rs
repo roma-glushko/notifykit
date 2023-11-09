@@ -1,4 +1,5 @@
 mod events;
+mod events2;
 mod watcher;
 
 extern crate notify;
