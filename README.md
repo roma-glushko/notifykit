@@ -1,6 +1,6 @@
 # 👀 inotifykit
 
-inotify-toolkit is a set of components for building modern Python applications 
+inotifykit is a set of components for building modern Python applications 
 with a need for watching filesystem events efficiently.
 
 > [!Warning]
