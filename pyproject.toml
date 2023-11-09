@@ -1,5 +1,5 @@
 [project]
-name = "inotify-toolkit"
+name = "inotifykit"
 version = "0.1.0"
 description = "A modern efficient Python toolkit for building applications that need to watch filesystem changes"
 authors = [
@@ -18,5 +18,5 @@ requires = ['maturin>=0.14.16,<2']
 build-backend = 'maturin'
 
 [tool.maturin]
-module-name = "inotify_toolkit._inotify_toolkit_lib"
+module-name = "inotifykit._inotifykit_lib"
 bindings = 'pyo3'

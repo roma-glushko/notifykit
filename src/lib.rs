@@ -70,7 +70,7 @@ impl WatcherWrapper {
 }
 
 #[pymodule]
-fn _inotify_toolkit_lib(py: Python, m: &PyModule) -> PyResult<()> {
+fn _inotifykit_lib(py: Python, m: &PyModule) -> PyResult<()> {
     let mut version = env!("CARGO_PKG_VERSION").to_string();
     version = version.replace("-alpha", "a").replace("-beta", "b");
 
