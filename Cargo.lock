@@ -93,16 +93,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "inotifykit_lib"
-version = "0.0.0"
-dependencies = [
- "crossbeam-channel",
- "crossbeam-utils",
- "notify",
- "pyo3",
-]
-
-[[package]]
 name = "kqueue"
 version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -182,6 +172,16 @@ dependencies = [
  "mio",
  "walkdir",
  "windows-sys",
+]
+
+[[package]]
+name = "notifykit_lib"
+version = "0.0.0"
+dependencies = [
+ "crossbeam-channel",
+ "crossbeam-utils",
+ "notify",
+ "pyo3",
 ]
 
 [[package]]

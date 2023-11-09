@@ -1,6 +1,6 @@
-# 👀 inotifykit
+# 👀 notifykit
 
-inotifykit is a set of components for building modern Python applications 
+notifykit is a set of components for building modern Python applications 
 with a need for watching filesystem events efficiently.
 
 > [!Warning]
