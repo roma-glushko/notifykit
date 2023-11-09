@@ -3,6 +3,9 @@
 inotify-toolkit is a set of components for building modern Python applications 
 with a need for watching filesystem events efficiently.
 
+> [!Warning]
+> notify-tookit is under active development right now
+
 ## Features
 
 - Simple Modern Pythonic API, both sync and async
