@@ -11,3 +11,9 @@ lib-lint:  ## Lint the library codebase (Rust)
 
 lib-dev:  ## Build the library codebase as importable .so module
 	@maturin develop
+
+docs-serve: ## Run documentation locally
+	@mkdocs serve -a localhost:7756
+
+docs-build: ## Make a publishable version of documentation
+	@mkdocs build

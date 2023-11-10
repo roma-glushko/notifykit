@@ -24,3 +24,4 @@
 - https://github.com/absperf/asyncinotify/
 - https://docs.rs/notify/latest/notify/
 - https://github.com/samuelcolvin/watchfiles
+- https://github.com/TheoBabilon/async-tail/
