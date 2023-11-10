@@ -10,7 +10,10 @@ help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 lib-lint:  ## Lint the library codebase (Rust)
-	@cargo fmt
+	@cargo fmt --version
+	@cargo fmt --all -- --check
+	@cargo clippy --version
+	@cargo clippy -- -D warnings
 
 lib-dev:  ## Build the library codebase as importable .so module
 	@maturin develop
@@ -18,3 +21,4 @@ lib-dev:  ## Build the library codebase as importable .so module
 lint: ## Lint all source code
 	@ruff --fix $(SOURCE)
 	@mypy --pretty $(SOURCE)
+
