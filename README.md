@@ -1,5 +1,5 @@
 <p align="center">
-  <img loading="lazy" src="https://raw.githubusercontent.com/roma-glushko/notifykit/main/imgs/logo.png" width="500px" alt="notifykit">
+  <img loading="lazy" src="https://raw.githubusercontent.com/roma-glushko/notifykit/main/imgs/logo.png" width="400px" alt="notifykit">
 </p>
 <p align="center">
     <em>👀 A cross-platform filesystem watcher toolkit for Python</em>
