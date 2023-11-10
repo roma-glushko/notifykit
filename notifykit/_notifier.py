@@ -11,16 +11,16 @@ class NotifierT(Protocol):
     def unwatch(self, paths: Sequence[str]) -> None:
         ...
 
-    def __enter__(self) -> 'Notifier':
+    def __enter__(self) -> "Notifier":
         ...
 
     def __exit__(self, *args, **kwargs) -> None:
         ...
 
-    def __aiter__(self) -> 'Notifier':
+    def __aiter__(self) -> "Notifier":
         ...
 
-    def __iter__(self) -> 'Notifier':
+    def __iter__(self) -> "Notifier":
         ...
 
 
@@ -43,7 +43,7 @@ class Notifier:
     def get(self) -> RawEvent:
         return self._watcher.get()
 
-    def __enter__(self) -> 'Notifier':
+    def __enter__(self) -> "Notifier":
         self._watcher.start()
 
         return self
@@ -54,10 +54,10 @@ class Notifier:
     def __del__(self) -> None:
         self._watcher.stop()
 
-    def __aiter__(self) -> 'Notifier':
+    def __aiter__(self) -> "Notifier":
         return self
 
-    def __iter__(self) -> 'Notifier':
+    def __iter__(self) -> "Notifier":
         return self
 
     def __next__(self) -> RawEvent:
