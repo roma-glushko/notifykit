@@ -5,7 +5,6 @@ mod watcher;
 extern crate notify;
 extern crate pyo3;
 
-use crate::events::RawEvent;
 use crate::watcher::{Watcher, WatcherError};
 use pyo3::exceptions::PyKeyboardInterrupt;
 use pyo3::prelude::*;
