@@ -1,5 +1,8 @@
 .PHONY: help
 
+SOURCE?=notifykit
+TESTS?=tests
+
 help:
 	@echo "============="
 	@echo "inotifykit 👀"
@@ -11,3 +14,7 @@ lib-lint:  ## Lint the library codebase (Rust)
 
 lib-dev:  ## Build the library codebase as importable .so module
 	@maturin develop
+
+lint: ## Lint all source code
+	@ruff --fix $(SOURCE)
+	@mypy --pretty $(SOURCE)

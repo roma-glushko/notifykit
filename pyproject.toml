@@ -20,3 +20,10 @@ build-backend = 'maturin'
 [tool.maturin]
 module-name = "notifykit._notifykit_lib"
 bindings = 'pyo3'
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "pytest>=7.4.3",
+    "mypy>=1.4.1",
+    "ruff>=0.1.5",
+]

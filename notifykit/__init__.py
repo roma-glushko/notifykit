@@ -3,5 +3,5 @@ from notifykit._notifykit_lib import __version__
 
 VERSION = __version__
 
-__all__ = Notifier, NotifierT, VERSION
+__all__ = ("Notifier", "NotifierT", "VERSION")
 
