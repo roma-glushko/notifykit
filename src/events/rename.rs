@@ -46,7 +46,12 @@ impl RenameEvent {
     }
 }
 
-pub fn from_rename_mode(detected_at_ns: u128, path: PathBuf, target_path: Option<PathBuf>, rename_mode: RenameMode) -> RenameEvent {
+pub fn from_rename_mode(
+    detected_at_ns: u128,
+    path: PathBuf,
+    target_path: Option<PathBuf>,
+    rename_mode: RenameMode,
+) -> RenameEvent {
     RenameEvent {
         detected_at_ns,
         path,

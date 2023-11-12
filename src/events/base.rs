@@ -1,5 +1,5 @@
-use pyo3::prelude::*;
 use notify::event::{CreateKind, RemoveKind};
+use pyo3::prelude::*;
 use std::convert::From;
 
 #[pyclass]
