@@ -1,5 +1,4 @@
 mod events;
-mod events2;
 mod watcher;
 
 extern crate notify;
@@ -10,8 +9,15 @@ use pyo3::exceptions::PyKeyboardInterrupt;
 use pyo3::prelude::*;
 use std::time::Duration;
 
+use crate::events::access::AccessEvent;
+use crate::events::create::CreateEvent;
+use crate::events::delete::DeleteEvent;
+use crate::events::modify::{ModifyAnyEvent, ModifyDataEvent, ModifyMetadataEvent, ModifyOtherEvent};
+use crate::events::others::{OtherEvent, UnknownEvent};
+use crate::events::rename::RenameEvent;
+
 #[pyclass]
-pub(crate) struct WatcherWrapper {
+pub struct WatcherWrapper {
     watcher: Watcher,
 }
 
@@ -24,7 +30,7 @@ impl WatcherWrapper {
         return Ok(WatcherWrapper { watcher: watcher? });
     }
 
-    pub fn get(&self, py: Python) -> PyResult<Option<RawEvent>> {
+    pub fn get(&self, py: Python) -> PyResult<Option<PyObject>> {
         loop {
             match py.check_signals() {
                 Ok(_) => (),
@@ -80,8 +86,16 @@ fn _notifykit_lib(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<WatcherWrapper>()?;
 
     // Event Data Classes
-
-    m.add_class::<RawEvent>()?;
+    m.add_class::<AccessEvent>()?;
+    m.add_class::<CreateEvent>()?;
+    m.add_class::<DeleteEvent>()?;
+    m.add_class::<RenameEvent>()?;
+    m.add_class::<ModifyMetadataEvent>()?;
+    m.add_class::<ModifyDataEvent>()?;
+    m.add_class::<ModifyOtherEvent>()?;
+    m.add_class::<ModifyAnyEvent>()?;
+    m.add_class::<OtherEvent>()?;
+    m.add_class::<UnknownEvent>()?;
 
     Ok(())
 }

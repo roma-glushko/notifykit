@@ -1,10 +1,10 @@
-use notify::event::{AccessMode as NotifyAccessMode, AccessKind};
+use notify::event::{AccessKind, AccessMode as NotifyAccessMode};
 use pyo3::prelude::*;
-
-use crate::events::base::EventAttributes;
+use std::convert::From;
+use std::path::PathBuf;
 
 #[derive(Debug)]
-pub(crate) enum AccessType {
+pub enum AccessType {
     Any = 0,
     Read = 1,
     Open = 2,
@@ -12,8 +12,20 @@ pub(crate) enum AccessType {
     Other = 4,
 }
 
+impl From<AccessKind> for AccessType {
+    fn from(kind: AccessKind) -> Self {
+        return match kind {
+            AccessKind::Read => AccessType::Read,
+            AccessKind::Open(_) => AccessType::Open,
+            AccessKind::Close(_) => AccessType::Close,
+            AccessKind::Other => AccessType::Other,
+            AccessKind::Any => AccessType::Any,
+        };
+    }
+}
+
 #[derive(Debug)]
-pub(crate) enum AccessMode {
+pub enum AccessMode {
     Any = 0,
     Read = 1,
     Write = 2,
@@ -21,8 +33,20 @@ pub(crate) enum AccessMode {
     Other = 4,
 }
 
+impl From<NotifyAccessMode> for AccessMode {
+    fn from(kind: NotifyAccessMode) -> Self {
+        return match kind {
+            NotifyAccessMode::Read => AccessMode::Read,
+            NotifyAccessMode::Write => AccessMode::Write,
+            NotifyAccessMode::Execute => AccessMode::Execute,
+            NotifyAccessMode::Other => AccessMode::Other,
+            NotifyAccessMode::Any => AccessMode::Any,
+        };
+    }
+}
+
 #[derive(Debug)]
-pub(crate) enum MetadataType {
+pub enum MetadataType {
     AccessTime = 0,
     WriteTime = 1,
     Ownership = 2,
@@ -32,50 +56,28 @@ pub(crate) enum MetadataType {
     Any = 6,
 }
 
-
 #[pyclass]
 #[derive(Debug)]
-pub(crate) struct AccessedEvent {
+pub(crate) struct AccessEvent {
     detected_at_ns: u128,
-    path: String,
+    path: PathBuf,
     access_type: AccessType,
     access_mode: Option<AccessMode>,
-    attributes: EventAttributes,
 }
 
-
-impl AccessedEvent {
-    pub fn new(detected_at_ns: u128, path: String, access_kind: AccessKind, attributes: EventAttributes) -> Self {
-        let access_type = match access_kind {
-            AccessKind::Read => AccessType::Read,
-            AccessKind::Open(_) => AccessType::Open,
-            AccessKind::Close(_) => AccessType::Close,
-            AccessKind::Other => AccessType::Other,
-            AccessKind::Any => AccessType::Any,
-        };
-
-        let map_access = |mode: NotifyAccessMode| -> AccessMode {
-            return match mode {
-                NotifyAccessMode::Read => AccessMode::Read,
-                NotifyAccessMode::Write => AccessMode::Write,
-                NotifyAccessMode::Execute => AccessMode::Execute,
-                NotifyAccessMode::Other => AccessMode::Other,
-                NotifyAccessMode::Any => AccessMode::Any,
-            };
-        };
-
+impl AccessEvent {
+    pub fn new(detected_at_ns: u128, path: PathBuf, access_kind: AccessKind) -> Self {
         let access_mode: Option<AccessMode> = match access_kind {
-            AccessKind::Open(access_mode) => Some(map_access(access_mode)),
-            AccessKind::Close(access_mode) => Some(map_access(access_mode)),
+            AccessKind::Open(access_mode) => Some(AccessMode::from(access_mode)),
+            AccessKind::Close(access_mode) => Some(AccessMode::from(access_mode)),
             _ => None,
         };
 
         Self {
             detected_at_ns,
             path,
-            access_type,
+            access_type: AccessType::from(access_kind),
             access_mode,
-            attributes,
         }
     }
 }

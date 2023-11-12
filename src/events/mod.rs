@@ -1,6 +1,7 @@
+pub(crate) mod access;
 mod base;
-mod access;
-mod create;
-mod delete;
-mod modify;
-mod others;
+pub(crate) mod create;
+pub(crate) mod delete;
+pub(crate) mod modify;
+pub(crate) mod others;
+pub(crate) mod rename;

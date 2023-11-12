@@ -1,17 +1,32 @@
-use pyo3::prelude::*;
+use notify::event::{CreateKind, RemoveKind};
+use std::convert::From;
 
-#[pyclass]
-#[derive(Clone, Debug)]
-pub(crate) struct EventAttributes {
-    pub(crate) tracker: Option<usize>,
-    // TODO: add the rest of data
+#[derive(Debug)]
+pub(crate) enum ObjectType {
+    Any = 0,
+    File = 1,
+    Dir = 2,
+    Other = 3,
 }
 
-#[pymethods]
-impl EventAttributes {
-    // pub(crate) fn from_raw_attrs(attrs: EventAttributes) -> Self {
-    //     EventAttributes {
-    //         tracker: attrs.tracker(),
-    //     }
-    // }
+impl From<CreateKind> for ObjectType {
+    fn from(kind: CreateKind) -> Self {
+        return match kind {
+            CreateKind::Any => ObjectType::Any,
+            CreateKind::File => ObjectType::File,
+            CreateKind::Folder => ObjectType::Dir,
+            CreateKind::Other => ObjectType::Other,
+        };
+    }
+}
+
+impl From<RemoveKind> for ObjectType {
+    fn from(kind: RemoveKind) -> Self {
+        return match kind {
+            RemoveKind::Any => ObjectType::Any,
+            RemoveKind::File => ObjectType::File,
+            RemoveKind::Folder => ObjectType::Dir,
+            RemoveKind::Other => ObjectType::Other,
+        };
+    }
 }
