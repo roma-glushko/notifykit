@@ -8,7 +8,9 @@ pub struct OtherEvent {
     path: PathBuf,
 }
 
+#[pymethods]
 impl OtherEvent {
+    #[new]
     pub fn new(detected_at_ns: u128, path: PathBuf) -> Self {
         Self { detected_at_ns, path }
     }
@@ -21,7 +23,9 @@ pub struct UnknownEvent {
     path: PathBuf,
 }
 
+#[pymethods]
 impl UnknownEvent {
+    #[new]
     pub fn new(detected_at_ns: u128, path: PathBuf) -> Self {
         Self { detected_at_ns, path }
     }

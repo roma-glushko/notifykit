@@ -12,12 +12,12 @@ use std::time::{Duration, SystemTime};
 
 use crossbeam_channel::{unbounded, Receiver, RecvTimeoutError, Sender};
 
-use crate::events::access::AccessEvent;
-use crate::events::create::CreateEvent;
-use crate::events::delete::DeleteEvent;
-use crate::events::modify::{ModifyAnyEvent, ModifyDataEvent, ModifyMetadataEvent, ModifyOtherEvent};
+use crate::events::access::from_access_kind;
+use crate::events::create::from_create_kind;
+use crate::events::delete::from_delete_kind;
+use crate::events::modify::{ModifyAnyEvent, from_data_kind, from_metadata_kind, ModifyOtherEvent};
 use crate::events::others::{OtherEvent, UnknownEvent};
-use crate::events::rename::RenameEvent;
+use crate::events::rename::from_rename_mode;
 
 use notify::event::{Event as NotifyEvent, ModifyKind};
 use notify::{
@@ -197,18 +197,16 @@ impl Watcher {
         let file_path: PathBuf = paths.first().unwrap().to_owned();
 
         return match notification.kind {
-            EventKind::Access(access_kind) => AccessEvent::new(detected_at_ns, file_path, access_kind),
-            EventKind::Create(create_kind) => CreateEvent::new(detected_at_ns, file_path, create_kind),
-            EventKind::Remove(delete_kind) => DeleteEvent::new(detected_at_ns, file_path, delete_kind),
+            EventKind::Access(access_kind) => from_access_kind(detected_at_ns, file_path, access_kind),
+            EventKind::Create(create_kind) => from_create_kind(detected_at_ns, file_path, create_kind),
+            EventKind::Remove(delete_kind) => from_delete_kind(detected_at_ns, file_path, delete_kind),
             EventKind::Modify(modify_kind) => match modify_kind {
-                ModifyKind::Metadata(metadata_kind) => {
-                    ModifyMetadataEvent::new(detected_at_ns, file_path, metadata_kind)
-                }
-                ModifyKind::Data(data_kind) => ModifyDataEvent::new(detected_at_ns, file_path, data_kind),
+                ModifyKind::Metadata(metadata_kind) => from_metadata_kind(detected_at_ns, file_path, metadata_kind),
+                ModifyKind::Data(data_kind) => from_data_kind(detected_at_ns, file_path, data_kind),
                 ModifyKind::Name(rename_mode) => {
                     let target_path = paths.last().to_owned();
 
-                    return RenameEvent::new(detected_at_ns, file_path, target_path, rename_mode);
+                    return from_rename_mode(detected_at_ns, file_path, target_path.cloned(), rename_mode);
                 }
                 ModifyKind::Other => ModifyOtherEvent::new(detected_at_ns, file_path),
                 ModifyKind::Any => ModifyAnyEvent::new(detected_at_ns, file_path),

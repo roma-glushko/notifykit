@@ -1,7 +1,9 @@
+use pyo3::prelude::*;
 use notify::event::{CreateKind, RemoveKind};
 use std::convert::From;
 
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub(crate) enum ObjectType {
     Any = 0,
     File = 1,
@@ -30,3 +32,5 @@ impl From<RemoveKind> for ObjectType {
         };
     }
 }
+
+pub trait Event {}

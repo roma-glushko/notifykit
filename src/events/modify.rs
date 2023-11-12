@@ -1,8 +1,10 @@
+use crate::events::base::Event;
 use notify::event::{DataChange, MetadataKind};
 use pyo3::prelude::*;
 use std::path::PathBuf;
 
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub(crate) enum MetadataType {
     AccessTime = 0,
     WriteTime = 1,
@@ -27,7 +29,8 @@ impl From<MetadataKind> for MetadataType {
     }
 }
 
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub(crate) enum DataType {
     Any = 0,
     Content = 1,
@@ -54,13 +57,25 @@ pub(crate) struct ModifyDataEvent {
     data_type: DataType,
 }
 
+#[pymethods]
 impl ModifyDataEvent {
-    pub fn new(detected_at_ns: u128, path: PathBuf, modify_kind: DataChange) -> Self {
+    #[new]
+    pub fn new(detected_at_ns: u128, path: PathBuf, data_type: DataType) -> Self {
         Self {
             detected_at_ns,
             path,
-            data_type: DataType::from(modify_kind),
+            data_type,
         }
+    }
+}
+
+impl Event for ModifyDataEvent {}
+
+pub fn from_data_kind(detected_at_ns: u128, path: PathBuf, data_kind: DataChange) -> ModifyDataEvent {
+    ModifyDataEvent {
+        detected_at_ns,
+        path,
+        data_type: DataType::from(data_kind),
     }
 }
 
@@ -72,13 +87,25 @@ pub(crate) struct ModifyMetadataEvent {
     metadata_type: MetadataType,
 }
 
+#[pymethods]
 impl ModifyMetadataEvent {
-    pub fn new(detected_at_ns: u128, path: PathBuf, metadata_kind: MetadataKind) -> Self {
+    #[new]
+    pub fn new(detected_at_ns: u128, path: PathBuf, metadata_type: MetadataType) -> Self {
         Self {
             detected_at_ns,
             path,
-            metadata_type: MetadataType::from(metadata_kind),
+            metadata_type,
         }
+    }
+}
+
+impl Event for ModifyMetadataEvent {}
+
+pub fn from_metadata_kind(detected_at_ns: u128, path: PathBuf, metadata_kind: MetadataKind) -> ModifyMetadataEvent {
+    ModifyMetadataEvent {
+        detected_at_ns,
+        path,
+        metadata_type: MetadataType::from(metadata_kind),
     }
 }
 
@@ -89,11 +116,15 @@ pub(crate) struct ModifyOtherEvent {
     path: PathBuf,
 }
 
+#[pymethods]
 impl ModifyOtherEvent {
+    #[new]
     pub fn new(detected_at_ns: u128, path: PathBuf) -> Self {
         Self { detected_at_ns, path }
     }
 }
+
+impl Event for ModifyOtherEvent {}
 
 #[pyclass]
 #[derive(Debug)]
@@ -102,8 +133,12 @@ pub(crate) struct ModifyAnyEvent {
     path: PathBuf,
 }
 
+#[pymethods]
 impl ModifyAnyEvent {
+    #[new]
     pub fn new(detected_at_ns: u128, path: PathBuf) -> Self {
         Self { detected_at_ns, path }
     }
 }
+
+impl Event for ModifyAnyEvent {}

@@ -1,5 +1,5 @@
 pub(crate) mod access;
-mod base;
+pub(crate) mod base;
 pub(crate) mod create;
 pub(crate) mod delete;
 pub(crate) mod modify;
