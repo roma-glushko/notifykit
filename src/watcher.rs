@@ -18,6 +18,7 @@ use crate::events::delete::from_delete_kind;
 use crate::events::modify::{from_data_kind, from_metadata_kind, ModifyAnyEvent, ModifyOtherEvent};
 use crate::events::others::{OtherEvent, UnknownEvent};
 use crate::events::rename::from_rename_mode;
+use crate::events::EventType;
 
 use notify::event::{Event as NotifyEvent, ModifyKind};
 use notify::{
@@ -27,8 +28,8 @@ use notify::{
 
 pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
 
-type EventSender = Sender<RawEvent>;
-type EventReceiver = Receiver<RawEvent>;
+type EventSender = Sender<EventType>;
+type EventReceiver = Receiver<EventType>;
 type NotificationReceiver = Receiver<NotifyResult<NotifyEvent>>;
 
 #[derive(Debug)]
@@ -67,7 +68,7 @@ impl Watcher {
             Err(e) => return Err(WatcherError::new_err(format!("Error creating poll watcher: {}", e))),
         };
 
-        let (event_sender, event_receiver) = unbounded::<RawEvent>();
+        let (event_sender, event_receiver) = unbounded::<EventType>();
 
         Ok(Watcher {
             debug,
@@ -114,7 +115,7 @@ impl Watcher {
             }
         };
 
-        let (event_sender, event_receiver) = unbounded::<RawEvent>();
+        let (event_sender, event_receiver) = unbounded::<EventType>();
 
         Ok(Watcher {
             debug,
@@ -190,33 +191,48 @@ impl Watcher {
         Ok(())
     }
 
-    fn create_event(notification: &Event) -> RawEvent {
+    fn create_event(notification: &Event) -> EventType {
         let detected_at_ns = Self::get_current_time_ns();
 
         let paths = &notification.paths;
         let file_path: PathBuf = paths.first().unwrap().to_owned();
 
         return match notification.kind {
-            EventKind::Access(access_kind) => from_access_kind(detected_at_ns, file_path, access_kind),
-            EventKind::Create(create_kind) => from_create_kind(detected_at_ns, file_path, create_kind),
-            EventKind::Remove(delete_kind) => from_delete_kind(detected_at_ns, file_path, delete_kind),
+            EventKind::Access(access_kind) => {
+                EventType::Access(from_access_kind(detected_at_ns, file_path, access_kind))
+            }
+            EventKind::Create(create_kind) => {
+                EventType::Create(from_create_kind(detected_at_ns, file_path, create_kind))
+            }
+            EventKind::Remove(delete_kind) => {
+                EventType::Delete(from_delete_kind(detected_at_ns, file_path, delete_kind))
+            }
             EventKind::Modify(modify_kind) => match modify_kind {
-                ModifyKind::Metadata(metadata_kind) => from_metadata_kind(detected_at_ns, file_path, metadata_kind),
-                ModifyKind::Data(data_kind) => from_data_kind(detected_at_ns, file_path, data_kind),
+                ModifyKind::Metadata(metadata_kind) => {
+                    EventType::ModifyMetadata(from_metadata_kind(detected_at_ns, file_path, metadata_kind))
+                }
+                ModifyKind::Data(data_kind) => {
+                    EventType::ModifyData(from_data_kind(detected_at_ns, file_path, data_kind))
+                }
                 ModifyKind::Name(rename_mode) => {
                     let target_path = paths.last().to_owned();
 
-                    return from_rename_mode(detected_at_ns, file_path, target_path.cloned(), rename_mode);
+                    return EventType::Rename(from_rename_mode(
+                        detected_at_ns,
+                        file_path,
+                        rename_mode,
+                        target_path.cloned(),
+                    ));
                 }
-                ModifyKind::Other => ModifyOtherEvent::new(detected_at_ns, file_path),
-                ModifyKind::Any => ModifyAnyEvent::new(detected_at_ns, file_path),
+                ModifyKind::Other => EventType::ModifyOther(ModifyOtherEvent::new(detected_at_ns, file_path)),
+                ModifyKind::Any => EventType::ModifyAny(ModifyAnyEvent::new(detected_at_ns, file_path)),
             },
-            EventKind::Other => OtherEvent::new(detected_at_ns, file_path),
-            EventKind::Any => UnknownEvent::new(detected_at_ns, file_path),
+            EventKind::Other => EventType::Others(OtherEvent::new(detected_at_ns, file_path)),
+            EventKind::Any => EventType::Unknown(UnknownEvent::new(detected_at_ns, file_path)),
         };
     }
 
-    pub fn get(&self, timeout: Duration) -> Result<Option<PyObject>, RecvTimeoutError> {
+    pub fn get(&self, timeout: Duration) -> Result<Option<EventType>, RecvTimeoutError> {
         if self.event_receiver.len() == 0 && self.listen_thread.is_none() {
             return Ok(None);
         }

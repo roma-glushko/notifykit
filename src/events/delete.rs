@@ -1,14 +1,17 @@
-use crate::events::base::{Event, ObjectType};
+use crate::events::base::ObjectType;
 use notify::event::RemoveKind;
 use pyo3::prelude::*;
 use std::path::PathBuf;
 
 #[pyclass]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DeleteEvent {
-    detected_at_ns: u128,
-    path: PathBuf,
-    file_type: ObjectType,
+    #[pyo3(get)]
+    pub detected_at_ns: u128,
+    #[pyo3(get)]
+    pub path: PathBuf,
+    #[pyo3(get)]
+    pub file_type: ObjectType,
 }
 
 #[pymethods]
@@ -30,5 +33,3 @@ pub fn from_delete_kind(detected_at_ns: u128, path: PathBuf, file_type: RemoveKi
         file_type: ObjectType::from(file_type),
     }
 }
-
-impl Event for DeleteEvent {}

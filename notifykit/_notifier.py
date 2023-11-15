@@ -1,7 +1,7 @@
 from os import PathLike
-from typing import Sequence, Protocol
+from typing import Sequence, Protocol, Any
 
-from notifykit._notifykit_lib import WatcherWrapper, RawEvent
+from notifykit._notifykit_lib import WatcherWrapper
 
 
 class NotifierT(Protocol):
@@ -40,7 +40,7 @@ class Notifier:
     def unwatch(self, paths: Sequence[str]) -> None:
         self._watcher.unwatch(list(paths))
 
-    def get(self) -> RawEvent:
+    def get(self) -> Any: # TODO:
         return self._watcher.get()
 
     def __enter__(self) -> 'Notifier':
@@ -60,7 +60,7 @@ class Notifier:
     def __iter__(self) -> 'Notifier':
         return self
 
-    def __next__(self) -> RawEvent:
+    def __next__(self) -> Any:  # TODO:
         event = self._watcher.get()
 
         if event is None:

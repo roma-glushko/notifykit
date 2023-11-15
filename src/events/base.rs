@@ -4,7 +4,7 @@ use std::convert::From;
 
 #[pyclass]
 #[derive(Debug, Clone)]
-pub(crate) enum ObjectType {
+pub enum ObjectType {
     Any = 0,
     File = 1,
     Dir = 2,
@@ -32,5 +32,3 @@ impl From<RemoveKind> for ObjectType {
         };
     }
 }
-
-pub trait Event {}

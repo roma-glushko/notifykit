@@ -2,10 +2,12 @@ use pyo3::prelude::*;
 use std::path::PathBuf;
 
 #[pyclass]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OtherEvent {
-    detected_at_ns: u128,
-    path: PathBuf,
+    #[pyo3(get)]
+    pub detected_at_ns: u128,
+    #[pyo3(get)]
+    pub path: PathBuf,
 }
 
 #[pymethods]
@@ -17,10 +19,12 @@ impl OtherEvent {
 }
 
 #[pyclass]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UnknownEvent {
-    detected_at_ns: u128,
-    path: PathBuf,
+    #[pyo3(get)]
+    pub detected_at_ns: u128,
+    #[pyo3(get)]
+    pub path: PathBuf,
 }
 
 #[pymethods]

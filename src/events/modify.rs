@@ -1,11 +1,10 @@
-use crate::events::base::Event;
 use notify::event::{DataChange, MetadataKind};
 use pyo3::prelude::*;
 use std::path::PathBuf;
 
 #[pyclass]
 #[derive(Debug, Clone)]
-pub(crate) enum MetadataType {
+pub enum MetadataType {
     AccessTime = 0,
     WriteTime = 1,
     Ownership = 2,
@@ -31,7 +30,7 @@ impl From<MetadataKind> for MetadataType {
 
 #[pyclass]
 #[derive(Debug, Clone)]
-pub(crate) enum DataType {
+pub enum DataType {
     Any = 0,
     Content = 1,
     Size = 2,
@@ -50,11 +49,14 @@ impl From<DataChange> for DataType {
 }
 
 #[pyclass]
-#[derive(Debug)]
-pub(crate) struct ModifyDataEvent {
-    detected_at_ns: u128,
-    path: PathBuf,
-    data_type: DataType,
+#[derive(Debug, Clone)]
+pub struct ModifyDataEvent {
+    #[pyo3(get)]
+    pub detected_at_ns: u128,
+    #[pyo3(get)]
+    pub path: PathBuf,
+    #[pyo3(get)]
+    pub data_type: DataType,
 }
 
 #[pymethods]
@@ -69,8 +71,6 @@ impl ModifyDataEvent {
     }
 }
 
-impl Event for ModifyDataEvent {}
-
 pub fn from_data_kind(detected_at_ns: u128, path: PathBuf, data_kind: DataChange) -> ModifyDataEvent {
     ModifyDataEvent {
         detected_at_ns,
@@ -80,11 +80,14 @@ pub fn from_data_kind(detected_at_ns: u128, path: PathBuf, data_kind: DataChange
 }
 
 #[pyclass]
-#[derive(Debug)]
-pub(crate) struct ModifyMetadataEvent {
-    detected_at_ns: u128,
-    path: PathBuf,
-    metadata_type: MetadataType,
+#[derive(Debug, Clone)]
+pub struct ModifyMetadataEvent {
+    #[pyo3(get)]
+    pub detected_at_ns: u128,
+    #[pyo3(get)]
+    pub path: PathBuf,
+    #[pyo3(get)]
+    pub metadata_type: MetadataType,
 }
 
 #[pymethods]
@@ -99,8 +102,6 @@ impl ModifyMetadataEvent {
     }
 }
 
-impl Event for ModifyMetadataEvent {}
-
 pub fn from_metadata_kind(detected_at_ns: u128, path: PathBuf, metadata_kind: MetadataKind) -> ModifyMetadataEvent {
     ModifyMetadataEvent {
         detected_at_ns,
@@ -110,10 +111,12 @@ pub fn from_metadata_kind(detected_at_ns: u128, path: PathBuf, metadata_kind: Me
 }
 
 #[pyclass]
-#[derive(Debug)]
-pub(crate) struct ModifyOtherEvent {
-    detected_at_ns: u128,
-    path: PathBuf,
+#[derive(Debug, Clone)]
+pub struct ModifyOtherEvent {
+    #[pyo3(get)]
+    pub detected_at_ns: u128,
+    #[pyo3(get)]
+    pub path: PathBuf,
 }
 
 #[pymethods]
@@ -124,13 +127,13 @@ impl ModifyOtherEvent {
     }
 }
 
-impl Event for ModifyOtherEvent {}
-
 #[pyclass]
-#[derive(Debug)]
-pub(crate) struct ModifyAnyEvent {
-    detected_at_ns: u128,
-    path: PathBuf,
+#[derive(Debug, Clone)]
+pub struct ModifyAnyEvent {
+    #[pyo3(get)]
+    pub detected_at_ns: u128,
+    #[pyo3(get)]
+    pub path: PathBuf,
 }
 
 #[pymethods]
@@ -140,5 +143,3 @@ impl ModifyAnyEvent {
         Self { detected_at_ns, path }
     }
 }
-
-impl Event for ModifyAnyEvent {}

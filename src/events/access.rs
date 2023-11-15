@@ -1,11 +1,10 @@
-use crate::events::base::Event;
 use notify::event::{AccessKind, AccessMode as NotifyAccessMode};
 use pyo3::prelude::*;
 use std::convert::From;
 use std::path::PathBuf;
 
 #[pyclass]
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum AccessType {
     Any = 0,
     Read = 1,
@@ -27,7 +26,7 @@ impl From<AccessKind> for AccessType {
 }
 
 #[pyclass]
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum AccessMode {
     Any = 0,
     Read = 1,
@@ -49,7 +48,7 @@ impl From<NotifyAccessMode> for AccessMode {
 }
 
 #[pyclass]
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum MetadataType {
     AccessTime = 0,
     WriteTime = 1,
@@ -61,12 +60,16 @@ pub enum MetadataType {
 }
 
 #[pyclass]
-#[derive(Debug)]
-pub(crate) struct AccessEvent {
-    detected_at_ns: u128,
-    path: PathBuf,
-    access_type: AccessType,
-    access_mode: Option<AccessMode>,
+#[derive(Debug, Clone)]
+pub struct AccessEvent {
+    #[pyo3(get)]
+    pub detected_at_ns: u128,
+    #[pyo3(get)]
+    pub path: PathBuf,
+    #[pyo3(get)]
+    pub access_type: AccessType,
+    #[pyo3(get)]
+    pub access_mode: Option<AccessMode>,
 }
 
 #[pymethods]
@@ -96,5 +99,3 @@ pub fn from_access_kind(detected_at_ns: u128, path: PathBuf, access_kind: Access
         access_mode,
     }
 }
-
-impl Event for AccessEvent {}

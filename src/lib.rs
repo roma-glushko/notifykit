@@ -15,6 +15,7 @@ use crate::events::delete::DeleteEvent;
 use crate::events::modify::{ModifyAnyEvent, ModifyDataEvent, ModifyMetadataEvent, ModifyOtherEvent};
 use crate::events::others::{OtherEvent, UnknownEvent};
 use crate::events::rename::RenameEvent;
+use crate::events::EventType;
 
 #[pyclass]
 pub struct WatcherWrapper {
@@ -35,7 +36,6 @@ impl WatcherWrapper {
             match py.check_signals() {
                 Ok(_) => (),
                 Err(_) => {
-                    // self.clear();
                     return Err(PyKeyboardInterrupt::new_err("KeyboardInterrupt"));
                 }
             };
@@ -43,7 +43,12 @@ impl WatcherWrapper {
             let result = self.watcher.get(Duration::from_millis(200));
 
             match result {
-                Ok(e) => return Ok(e),
+                Ok(event_or_none) => {
+                    return match event_or_none {
+                        Some(event) => Ok(Some(event.to_object(py))),
+                        None => Ok(None),
+                    }
+                }
                 Err(_) => continue,
             }
         }

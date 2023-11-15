@@ -25,12 +25,16 @@ impl From<RenameMode> for RenameType {
 }
 
 #[pyclass]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RenameEvent {
-    detected_at_ns: u128,
-    path: PathBuf,
-    target_path: Option<PathBuf>,
-    rename_type: RenameType,
+    #[pyo3(get)]
+    pub detected_at_ns: u128,
+    #[pyo3(get)]
+    pub path: PathBuf,
+    #[pyo3(get)]
+    pub rename_type: RenameType,
+    #[pyo3(get)]
+    pub target_path: Option<PathBuf>,
 }
 
 #[pymethods]
@@ -49,8 +53,8 @@ impl RenameEvent {
 pub fn from_rename_mode(
     detected_at_ns: u128,
     path: PathBuf,
-    target_path: Option<PathBuf>,
     rename_mode: RenameMode,
+    target_path: Option<PathBuf>,
 ) -> RenameEvent {
     RenameEvent {
         detected_at_ns,
