@@ -24,6 +24,15 @@ impl DeleteEvent {
             file_type,
         }
     }
+
+    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
+        Ok(format!(
+            "DeleteEvent({:?}, {:?}, {:?})",
+            slf.borrow().detected_at_ns,
+            slf.borrow().path,
+            slf.borrow().file_type,
+        ))
+    }
 }
 
 pub fn from_delete_kind(detected_at_ns: u128, path: PathBuf, file_type: RemoveKind) -> DeleteEvent {

@@ -16,6 +16,10 @@ impl OtherEvent {
     pub fn new(detected_at_ns: u128, path: PathBuf) -> Self {
         Self { detected_at_ns, path }
     }
+
+    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
+        Ok(format!("OtherEvent({:?})", slf.borrow().path,))
+    }
 }
 
 #[pyclass]
@@ -32,5 +36,9 @@ impl UnknownEvent {
     #[new]
     pub fn new(detected_at_ns: u128, path: PathBuf) -> Self {
         Self { detected_at_ns, path }
+    }
+
+    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
+        Ok(format!("UnknownEvent({:?})", slf.borrow().path,))
     }
 }

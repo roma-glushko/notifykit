@@ -83,6 +83,16 @@ impl AccessEvent {
             access_mode,
         }
     }
+
+    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
+        Ok(format!(
+            "AccessEvent({:?}, {:?}, {:?},  {:?})",
+            slf.borrow().detected_at_ns,
+            slf.borrow().path,
+            slf.borrow().access_type,
+            slf.borrow().access_mode,
+        ))
+    }
 }
 
 pub fn from_access_kind(detected_at_ns: u128, path: PathBuf, access_kind: AccessKind) -> AccessEvent {

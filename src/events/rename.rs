@@ -48,6 +48,15 @@ impl RenameEvent {
             rename_type,
         }
     }
+
+    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
+        Ok(format!(
+            "RenameEvent({:?}, {:?}, {:?})",
+            slf.borrow().detected_at_ns,
+            slf.borrow().path,
+            slf.borrow().rename_type
+        ))
+    }
 }
 
 pub fn from_rename_mode(

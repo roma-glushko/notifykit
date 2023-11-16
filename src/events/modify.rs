@@ -69,6 +69,15 @@ impl ModifyDataEvent {
             data_type,
         }
     }
+
+    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
+        Ok(format!(
+            "ModifyDataEvent({:?}, {:?}, {:?})",
+            slf.borrow().detected_at_ns,
+            slf.borrow().path,
+            slf.borrow().data_type,
+        ))
+    }
 }
 
 pub fn from_data_kind(detected_at_ns: u128, path: PathBuf, data_kind: DataChange) -> ModifyDataEvent {
@@ -100,6 +109,15 @@ impl ModifyMetadataEvent {
             metadata_type,
         }
     }
+
+    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
+        Ok(format!(
+            "ModifyMetadataEvent({:?}, {:?}, {:?})",
+            slf.borrow().detected_at_ns,
+            slf.borrow().path,
+            slf.borrow().metadata_type,
+        ))
+    }
 }
 
 pub fn from_metadata_kind(detected_at_ns: u128, path: PathBuf, metadata_kind: MetadataKind) -> ModifyMetadataEvent {
@@ -125,6 +143,14 @@ impl ModifyOtherEvent {
     pub fn new(detected_at_ns: u128, path: PathBuf) -> Self {
         Self { detected_at_ns, path }
     }
+
+    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
+        Ok(format!(
+            "ModifyOtherEvent({:?}, {:?})",
+            slf.borrow().detected_at_ns,
+            slf.borrow().path,
+        ))
+    }
 }
 
 #[pyclass]
@@ -141,5 +167,13 @@ impl ModifyAnyEvent {
     #[new]
     pub fn new(detected_at_ns: u128, path: PathBuf) -> Self {
         Self { detected_at_ns, path }
+    }
+
+    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
+        Ok(format!(
+            "ModifyAnyEvent({:?}, {:?})",
+            slf.borrow().detected_at_ns,
+            slf.borrow().path,
+        ))
     }
 }

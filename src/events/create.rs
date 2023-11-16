@@ -24,6 +24,15 @@ impl CreateEvent {
             file_type,
         }
     }
+
+    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
+        Ok(format!(
+            "CreateEvent({:?}, {:?}, {:?})",
+            slf.borrow().detected_at_ns,
+            slf.borrow().path,
+            slf.borrow().file_type,
+        ))
+    }
 }
 
 pub fn from_create_kind(detected_at_ns: u128, path: PathBuf, file_type: CreateKind) -> CreateEvent {
