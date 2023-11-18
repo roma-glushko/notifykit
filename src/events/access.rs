@@ -63,8 +63,6 @@ pub enum MetadataType {
 #[derive(Debug, Clone)]
 pub struct AccessEvent {
     #[pyo3(get)]
-    pub detected_at_ns: u128,
-    #[pyo3(get)]
     pub path: PathBuf,
     #[pyo3(get)]
     pub access_type: AccessType,
@@ -75,9 +73,8 @@ pub struct AccessEvent {
 #[pymethods]
 impl AccessEvent {
     #[new]
-    pub fn new(detected_at_ns: u128, path: PathBuf, access_type: AccessType, access_mode: Option<AccessMode>) -> Self {
+    pub fn new(path: PathBuf, access_type: AccessType, access_mode: Option<AccessMode>) -> Self {
         Self {
-            detected_at_ns,
             path,
             access_type,
             access_mode,
@@ -86,8 +83,7 @@ impl AccessEvent {
 
     fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
         Ok(format!(
-            "AccessEvent({:?}, {:?}, {:?},  {:?})",
-            slf.borrow().detected_at_ns,
+            "AccessEvent({:?}, {:?},  {:?})",
             slf.borrow().path,
             slf.borrow().access_type,
             slf.borrow().access_mode,
@@ -95,7 +91,7 @@ impl AccessEvent {
     }
 }
 
-pub fn from_access_kind(detected_at_ns: u128, path: PathBuf, access_kind: AccessKind) -> AccessEvent {
+pub fn from_access_kind(path: PathBuf, access_kind: AccessKind) -> AccessEvent {
     let access_mode: Option<AccessMode> = match access_kind {
         AccessKind::Open(access_mode) => Some(AccessMode::from(access_mode)),
         AccessKind::Close(access_mode) => Some(AccessMode::from(access_mode)),
@@ -103,7 +99,6 @@ pub fn from_access_kind(detected_at_ns: u128, path: PathBuf, access_kind: Access
     };
 
     AccessEvent {
-        detected_at_ns,
         path,
         access_type: AccessType::from(access_kind),
         access_mode,

@@ -7,8 +7,6 @@ use std::path::PathBuf;
 #[derive(Debug, Clone)]
 pub struct DeleteEvent {
     #[pyo3(get)]
-    pub detected_at_ns: u128,
-    #[pyo3(get)]
     pub path: PathBuf,
     #[pyo3(get)]
     pub file_type: ObjectType,
@@ -17,27 +15,21 @@ pub struct DeleteEvent {
 #[pymethods]
 impl DeleteEvent {
     #[new]
-    pub fn new(detected_at_ns: u128, path: PathBuf, file_type: ObjectType) -> Self {
-        Self {
-            detected_at_ns,
-            path,
-            file_type,
-        }
+    pub fn new(path: PathBuf, file_type: ObjectType) -> Self {
+        Self { path, file_type }
     }
 
     fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
         Ok(format!(
-            "DeleteEvent({:?}, {:?}, {:?})",
-            slf.borrow().detected_at_ns,
+            "DeleteEvent({:?}, {:?})",
             slf.borrow().path,
             slf.borrow().file_type,
         ))
     }
 }
 
-pub fn from_delete_kind(detected_at_ns: u128, path: PathBuf, file_type: RemoveKind) -> DeleteEvent {
+pub fn from_delete_kind(path: PathBuf, file_type: RemoveKind) -> DeleteEvent {
     DeleteEvent {
-        detected_at_ns,
         path,
         file_type: ObjectType::from(file_type),
     }

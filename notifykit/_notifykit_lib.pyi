@@ -31,9 +31,9 @@ class WatcherWrapper:
 
     def __init__(
         self,
+        debounce_ms: int,
+        debounce_tick_rate_ms: Optional[int] = None,
         debug: bool = False,
-        force_polling: bool = False,
-        poll_delay_ms: int = 50,
     ) -> None:
         """
 

@@ -7,8 +7,6 @@ use std::path::PathBuf;
 #[derive(Debug, Clone)]
 pub struct CreateEvent {
     #[pyo3(get)]
-    pub detected_at_ns: u128,
-    #[pyo3(get)]
     pub path: PathBuf,
     #[pyo3(get)]
     pub file_type: ObjectType,
@@ -17,27 +15,21 @@ pub struct CreateEvent {
 #[pymethods]
 impl CreateEvent {
     #[new]
-    pub fn new(detected_at_ns: u128, path: PathBuf, file_type: ObjectType) -> Self {
-        Self {
-            detected_at_ns,
-            path,
-            file_type,
-        }
+    pub fn new(path: PathBuf, file_type: ObjectType) -> Self {
+        Self { path, file_type }
     }
 
     fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
         Ok(format!(
-            "CreateEvent({:?}, {:?}, {:?})",
-            slf.borrow().detected_at_ns,
+            "CreateEvent({:?}, {:?})",
             slf.borrow().path,
             slf.borrow().file_type,
         ))
     }
 }
 
-pub fn from_create_kind(detected_at_ns: u128, path: PathBuf, file_type: CreateKind) -> CreateEvent {
+pub fn from_create_kind(path: PathBuf, file_type: CreateKind) -> CreateEvent {
     CreateEvent {
-        detected_at_ns,
         path,
         file_type: ObjectType::from(file_type),
     }

@@ -6,7 +6,6 @@ pub(crate) mod base;
 pub(crate) mod create;
 pub(crate) mod delete;
 pub(crate) mod modify;
-pub(crate) mod others;
 pub(crate) mod rename;
 
 pub enum EventType {
@@ -18,8 +17,6 @@ pub enum EventType {
     ModifyAny(modify::ModifyAnyEvent),
     ModifyOther(modify::ModifyOtherEvent),
     Rename(rename::RenameEvent),
-    Others(others::OtherEvent),
-    Unknown(others::UnknownEvent),
 }
 
 impl ToPyObject for EventType {
@@ -33,8 +30,6 @@ impl ToPyObject for EventType {
             EventType::ModifyOther(event) => event.clone().into_py(py),
             EventType::ModifyAny(event) => event.clone().into_py(py),
             EventType::Rename(event) => event.clone().into_py(py),
-            EventType::Others(event) => event.clone().into_py(py),
-            EventType::Unknown(event) => event.clone().into_py(py),
         }
     }
 }

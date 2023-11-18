@@ -10,7 +10,8 @@ readme = "README.md"
 [dependencies]
 crossbeam-channel = "0.5.4"
 crossbeam-utils = "0.8.16"
-notify = "6.0.0"
+notify-debouncer-full = "0.3.1"
+notify = { version = "6.1.1"}
 pyo3 = {version = "0.19.2", features = ["extension-module", "abi3-py37"]}
 
 [lib]

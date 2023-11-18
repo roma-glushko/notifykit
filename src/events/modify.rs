@@ -52,8 +52,6 @@ impl From<DataChange> for DataType {
 #[derive(Debug, Clone)]
 pub struct ModifyDataEvent {
     #[pyo3(get)]
-    pub detected_at_ns: u128,
-    #[pyo3(get)]
     pub path: PathBuf,
     #[pyo3(get)]
     pub data_type: DataType,
@@ -62,27 +60,21 @@ pub struct ModifyDataEvent {
 #[pymethods]
 impl ModifyDataEvent {
     #[new]
-    pub fn new(detected_at_ns: u128, path: PathBuf, data_type: DataType) -> Self {
-        Self {
-            detected_at_ns,
-            path,
-            data_type,
-        }
+    pub fn new(path: PathBuf, data_type: DataType) -> Self {
+        Self { path, data_type }
     }
 
     fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
         Ok(format!(
-            "ModifyDataEvent({:?}, {:?}, {:?})",
-            slf.borrow().detected_at_ns,
+            "ModifyDataEvent({:?}, {:?})",
             slf.borrow().path,
             slf.borrow().data_type,
         ))
     }
 }
 
-pub fn from_data_kind(detected_at_ns: u128, path: PathBuf, data_kind: DataChange) -> ModifyDataEvent {
+pub fn from_data_kind(path: PathBuf, data_kind: DataChange) -> ModifyDataEvent {
     ModifyDataEvent {
-        detected_at_ns,
         path,
         data_type: DataType::from(data_kind),
     }
@@ -92,8 +84,6 @@ pub fn from_data_kind(detected_at_ns: u128, path: PathBuf, data_kind: DataChange
 #[derive(Debug, Clone)]
 pub struct ModifyMetadataEvent {
     #[pyo3(get)]
-    pub detected_at_ns: u128,
-    #[pyo3(get)]
     pub path: PathBuf,
     #[pyo3(get)]
     pub metadata_type: MetadataType,
@@ -102,27 +92,21 @@ pub struct ModifyMetadataEvent {
 #[pymethods]
 impl ModifyMetadataEvent {
     #[new]
-    pub fn new(detected_at_ns: u128, path: PathBuf, metadata_type: MetadataType) -> Self {
-        Self {
-            detected_at_ns,
-            path,
-            metadata_type,
-        }
+    pub fn new(path: PathBuf, metadata_type: MetadataType) -> Self {
+        Self { path, metadata_type }
     }
 
     fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
         Ok(format!(
-            "ModifyMetadataEvent({:?}, {:?}, {:?})",
-            slf.borrow().detected_at_ns,
+            "ModifyMetadataEvent({:?}, {:?})",
             slf.borrow().path,
             slf.borrow().metadata_type,
         ))
     }
 }
 
-pub fn from_metadata_kind(detected_at_ns: u128, path: PathBuf, metadata_kind: MetadataKind) -> ModifyMetadataEvent {
+pub fn from_metadata_kind(path: PathBuf, metadata_kind: MetadataKind) -> ModifyMetadataEvent {
     ModifyMetadataEvent {
-        detected_at_ns,
         path,
         metadata_type: MetadataType::from(metadata_kind),
     }
@@ -132,24 +116,18 @@ pub fn from_metadata_kind(detected_at_ns: u128, path: PathBuf, metadata_kind: Me
 #[derive(Debug, Clone)]
 pub struct ModifyOtherEvent {
     #[pyo3(get)]
-    pub detected_at_ns: u128,
-    #[pyo3(get)]
     pub path: PathBuf,
 }
 
 #[pymethods]
 impl ModifyOtherEvent {
     #[new]
-    pub fn new(detected_at_ns: u128, path: PathBuf) -> Self {
-        Self { detected_at_ns, path }
+    pub fn new(path: PathBuf) -> Self {
+        Self { path }
     }
 
     fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
-        Ok(format!(
-            "ModifyOtherEvent({:?}, {:?})",
-            slf.borrow().detected_at_ns,
-            slf.borrow().path,
-        ))
+        Ok(format!("ModifyOtherEvent({:?})", slf.borrow().path,))
     }
 }
 
@@ -157,23 +135,17 @@ impl ModifyOtherEvent {
 #[derive(Debug, Clone)]
 pub struct ModifyAnyEvent {
     #[pyo3(get)]
-    pub detected_at_ns: u128,
-    #[pyo3(get)]
     pub path: PathBuf,
 }
 
 #[pymethods]
 impl ModifyAnyEvent {
     #[new]
-    pub fn new(detected_at_ns: u128, path: PathBuf) -> Self {
-        Self { detected_at_ns, path }
+    pub fn new(path: PathBuf) -> Self {
+        Self { path }
     }
 
     fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
-        Ok(format!(
-            "ModifyAnyEvent({:?}, {:?})",
-            slf.borrow().detected_at_ns,
-            slf.borrow().path,
-        ))
+        Ok(format!("ModifyAnyEvent({:?})", slf.borrow().path,))
     }
 }
