@@ -168,7 +168,7 @@ jobs:
           target: ${{ matrix.target }}
           container: ${{ matrix.container }}
           manylinux: ${{ matrix.manylinux || 'auto' }}
-          args: --release --out dist --interpreter ${{ matrix.interpreter || '3.8 3.9 3.10 3.11 3.12 pypy3.8 pypy3.9 pypy3.10' }}
+          args: --release --out dist --interpreter ${{ matrix.interpreter || '3.8 3.9 3.10 3.11 3.12' }}
           rust-toolchain: stable
           docker-options: -e CI
 
@@ -178,7 +178,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux || 'auto' }}
-          args: --release --out dist --interpreter pypy3.8 pypy3.9
+          args: --release --out dist --interpreter pypy3.8 pypy3.9 pypy3.10
 
       - run: ${{ matrix.ls || 'ls -lh' }} dist/
 
@@ -214,7 +214,7 @@ jobs:
       - name: extract and list wheel file
         run: |
           ls dist/*cp310-manylinux*x86_64.whl | head -n 1
-          python -m zipfile --list `ls dist/*cp310-manylinux*x86_64.whl | head -n 1`
+          python -m zipfile --list `ls dist/*cp312-manylinux_2_17_x86_64*.whl | head -n 1`
 
       - run: pip install twine
       - run: twine check dist/*
