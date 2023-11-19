@@ -92,9 +92,11 @@ jobs:
       - name: Install dependencies
         run: pdm install
 
-      - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: --all-files
+      - name: Lint Rust codebase
+        run: make lib-lint
+
+      - name: Lint Python codebase
+        run: make lint
 
   build:
     name: >

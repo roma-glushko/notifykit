@@ -9,13 +9,13 @@ help:
 	@echo "============="
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-lib-lint-check:  ## Lint the library codebase (Rust)
+lib-lint:  ## Lint the library codebase without changes (Rust)
 	@cargo fmt --version
 	@cargo fmt --all -- --check
 	@cargo clippy --version
 	@cargo clippy -- -D warnings
 
-lib-lint:  ## Lint the library codebase (Rust)
+lib-lint-fix:  ## Lint the library codebase (Rust)
 	@cargo fmt --version
 	@cargo fmt --all
 	@cargo clippy --version
@@ -24,7 +24,12 @@ lib-lint:  ## Lint the library codebase (Rust)
 lib-dev:  ## Build the library codebase as importable .so module
 	@maturin develop
 
-lint: ## Lint all source code
-	@ruff --fix $(SOURCE)
+lint: ## Lint all Python source code without changes
+	@ruff $(SOURCE)
+	@ruff format $(SOURCE) --diff
 	@mypy --pretty $(SOURCE)
 
+lint-fix: ## Lint all source code
+	@ruff --fix $(SOURCE)
+	@ruff format $(SOURCE)
+	@mypy --pretty $(SOURCE)

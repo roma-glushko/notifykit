@@ -29,7 +29,7 @@ class Notifier:
     Notifier collects filesystem events from the underlying watcher and expose them via sync/async API
     """
 
-    def __init__(self,  debounce_ms: int, debounce_tick_rate_ms: Optional[int] = None, debug: bool = False) -> None:
+    def __init__(self, debounce_ms: int, debounce_tick_rate_ms: Optional[int] = None, debug: bool = False) -> None:
         self._debug = debug
 
         self._watcher = WatcherWrapper(debounce_ms, debounce_tick_rate_ms, debug)

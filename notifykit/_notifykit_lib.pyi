@@ -50,8 +50,7 @@ class AccessEvent:
     access_type: AccessType
     access_mode: Optional[AccessMode]
 
-    def __init__(self, event_type: int, detected_at_ns: int, path: str) -> None:
-        ...
+    def __init__(self, event_type: int, detected_at_ns: int, path: str) -> None: ...
 
 class CreateEvent:
     path: Path
@@ -76,9 +75,9 @@ class RenameEvent:
     old_path: Path
     new_path: Path
 
-
-Events = AccessEvent | CreateEvent | ModifyDataEvent | ModifyMetadataEvent | ModifyOtherEvent | DeleteEvent | RenameEvent
-
+Events = (
+    AccessEvent | CreateEvent | ModifyDataEvent | ModifyMetadataEvent | ModifyOtherEvent | DeleteEvent | RenameEvent
+)
 
 class WatcherWrapper:
     """
@@ -93,32 +92,21 @@ class WatcherWrapper:
         debounce_tick_rate_ms: Optional[int] = None,
         debug: bool = False,
     ) -> None:
-        """
-
-        """
+        """ """
         ...
 
     def watch(self, paths: List[str], recursive: bool = True, ignore_permission_errors: bool = False) -> None:
-        """
-
-        """
+        """ """
         ...
 
     def unwatch(self, paths: List[str]) -> None:
-        """
-        """
+        """ """
         ...
 
-    def get(self) -> Optional[Events]:
-        ...
-
+    def get(self) -> Optional[Events]: ...
     def close(self) -> None:
-        """
-        """
+        """ """
         ...
 
-    def start(self) -> None:
-        ...
-
-    def stop(self) -> None:
-        ...
+    def start(self) -> None: ...
+    def stop(self) -> None: ...
