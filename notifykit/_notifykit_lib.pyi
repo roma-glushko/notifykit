@@ -1,6 +1,6 @@
 from enum import IntEnum
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Any
 
 """
 The lib version
@@ -50,8 +50,6 @@ class AccessEvent:
     access_type: AccessType
     access_mode: Optional[AccessMode]
 
-    def __init__(self, event_type: int, detected_at_ns: int, path: str) -> None: ...
-
 class CreateEvent:
     path: Path
     file_type: ObjectType
@@ -75,10 +73,6 @@ class RenameEvent:
     old_path: Path
     new_path: Path
 
-Events = (
-    AccessEvent | CreateEvent | ModifyDataEvent | ModifyMetadataEvent | ModifyOtherEvent | DeleteEvent | RenameEvent
-)
-
 class WatcherWrapper:
     """
     Watcher listens to filesystem events and retrieves them for the Notifier.
@@ -91,22 +85,10 @@ class WatcherWrapper:
         debounce_ms: int,
         debug: bool = False,
         debounce_tick_rate_ms: Optional[int] = None,
-    ) -> None:
-        """ """
-        ...
-
-    def watch(self, paths: List[str], recursive: bool = True, ignore_permission_errors: bool = False) -> None:
-        """ """
-        ...
-
-    def unwatch(self, paths: List[str]) -> None:
-        """ """
-        ...
-
-    def get(self) -> Optional[Events]: ...
-    def close(self) -> None:
-        """ """
-        ...
-
+    ) -> None: ...
+    def watch(self, paths: List[str], recursive: bool = True, ignore_permission_errors: bool = False) -> None: ...
+    def unwatch(self, paths: List[str]) -> None: ...
+    def get(self) -> Optional[Any]: ...
+    def close(self) -> None: ...
     def start(self) -> None: ...
     def stop(self) -> None: ...

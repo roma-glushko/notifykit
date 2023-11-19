@@ -1,6 +1,19 @@
 from os import PathLike
 from typing import Sequence, Protocol, Optional, Any
-from notifykit._notifykit_lib import WatcherWrapper, Events
+from notifykit._notifykit_lib import (
+    WatcherWrapper,
+    AccessEvent,
+    CreateEvent,
+    ModifyDataEvent,
+    ModifyMetadataEvent,
+    ModifyOtherEvent,
+    DeleteEvent,
+    RenameEvent,
+)
+
+Events = (
+    AccessEvent | CreateEvent | ModifyDataEvent | ModifyMetadataEvent | ModifyOtherEvent | DeleteEvent | RenameEvent
+)
 
 
 class NotifierT(Protocol):
