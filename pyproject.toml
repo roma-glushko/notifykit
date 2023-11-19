@@ -1,15 +1,21 @@
 [project]
 name = "notifykit"
-version = "0.1.0"
+version = "0.0.1-alpha.1"
 description = "A modern efficient Python toolkit for building applications that need to watch filesystem changes"
 authors = [
     {name = "Roman Glushko", email = "roman.glushko.m@gmail.com"},
 ]
 
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+
 dependencies = [
 ]
 
-requires-python = ">=3.7"
+requires-python = '>=3.8'
 readme = "README.md"
 license = {text = "MIT"}
 
@@ -20,3 +26,20 @@ build-backend = 'maturin'
 [tool.maturin]
 module-name = "notifykit._notifykit_lib"
 bindings = 'pyo3'
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "pytest>=7.4.3",
+    "mypy>=1.4.1",
+    "ruff>=0.1.5",
+]
+
+[tool.ruff]
+line-length = 120
+extend-select = ['Q']
+flake8-quotes = {inline-quotes = 'double', multiline-quotes = 'double'}
+
+[tool.mypy]
+strict = true
+warn_return_any = false
+show_error_codes = true

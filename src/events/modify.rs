@@ -16,7 +16,7 @@ pub enum MetadataType {
 
 impl From<MetadataKind> for MetadataType {
     fn from(kind: MetadataKind) -> Self {
-        return match kind {
+        match kind {
             MetadataKind::AccessTime => Self::AccessTime,
             MetadataKind::WriteTime => Self::WriteTime,
             MetadataKind::Ownership => Self::Ownership,
@@ -24,7 +24,7 @@ impl From<MetadataKind> for MetadataType {
             MetadataKind::Extended => Self::Extended,
             MetadataKind::Other => Self::Other,
             MetadataKind::Any => Self::Any,
-        };
+        }
     }
 }
 
@@ -39,12 +39,12 @@ pub enum DataType {
 
 impl From<DataChange> for DataType {
     fn from(kind: DataChange) -> Self {
-        return match kind {
+        match kind {
             DataChange::Content => Self::Content,
             DataChange::Size => Self::Size,
             DataChange::Other => Self::Other,
             DataChange::Any => Self::Any,
-        };
+        }
     }
 }
 

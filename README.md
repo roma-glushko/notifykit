@@ -24,3 +24,5 @@
 - https://github.com/absperf/asyncinotify/
 - https://docs.rs/notify/latest/notify/
 - https://github.com/samuelcolvin/watchfiles
+- https://github.com/pantsbuild/pants/tree/612e891e90432e994327b6ddaf57502366a714c0/src/rust/engine
+- https://github.com/pola-rs/polars/blob/d0c8de592b71d4b934b1598926536f03e10007bd/py-polars/src/file.rs#L206
