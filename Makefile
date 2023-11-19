@@ -25,11 +25,11 @@ lib-dev:  ## Build the library codebase as importable .so module
 	@maturin develop
 
 lint: ## Lint all Python source code without changes
-	@ruff $(SOURCE)
-	@ruff format $(SOURCE) --diff
-	@mypy --pretty $(SOURCE)
+	@pdm run ruff $(SOURCE)
+	@pdm run ruff format $(SOURCE) --diff
+	@pdm run mypy --pretty $(SOURCE)
 
 lint-fix: ## Lint all source code
-	@ruff --fix $(SOURCE)
-	@ruff format $(SOURCE)
-	@mypy --pretty $(SOURCE)
+	@pdm run ruff --fix $(SOURCE)
+	@pdm run ruff format $(SOURCE)
+	@pdm run mypy --pretty $(SOURCE)
