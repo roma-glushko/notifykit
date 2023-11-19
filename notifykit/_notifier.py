@@ -1,11 +1,12 @@
 from os import PathLike
-from typing import Sequence, Protocol, Optional
-
+from typing import Sequence, Protocol, Optional, Any
 from notifykit._notifykit_lib import WatcherWrapper, Events
 
 
 class NotifierT(Protocol):
-    def watch(self, paths: Sequence[PathLike], recursive: bool = True, ignore_permission_errors: bool = False) -> None:
+    def watch(
+        self, paths: Sequence[PathLike[str]], recursive: bool = True, ignore_permission_errors: bool = False
+    ) -> None:
         ...
 
     def unwatch(self, paths: Sequence[str]) -> None:
@@ -14,7 +15,7 @@ class NotifierT(Protocol):
     def __enter__(self) -> "Notifier":
         ...
 
-    def __exit__(self, *args, **kwargs) -> None:
+    def __exit__(self, *args: Any, **kwargs: Any) -> None:
         ...
 
     def __aiter__(self) -> "Notifier":
@@ -34,13 +35,15 @@ class Notifier:
 
         self._watcher = WatcherWrapper(debounce_ms, debounce_tick_rate_ms, debug)
 
-    def watch(self, paths: Sequence[PathLike], recursive: bool = True, ignore_permission_errors: bool = False) -> None:
+    def watch(
+        self, paths: Sequence[PathLike[str]], recursive: bool = True, ignore_permission_errors: bool = False
+    ) -> None:
         self._watcher.watch([str(path) for path in paths], recursive, ignore_permission_errors)
 
     def unwatch(self, paths: Sequence[str]) -> None:
         self._watcher.unwatch(list(paths))
 
-    def get(self) -> Events:
+    def get(self) -> Optional[Events]:
         return self._watcher.get()
 
     def __enter__(self) -> "Notifier":
@@ -48,7 +51,7 @@ class Notifier:
 
         return self
 
-    def __exit__(self, *args, **kwargs) -> None:
+    def __exit__(self, *args: Any, **kwargs: Any) -> None:
         self._watcher.stop()
 
     def __del__(self) -> None:
