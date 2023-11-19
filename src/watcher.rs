@@ -1,32 +1,31 @@
 extern crate notify;
 extern crate pyo3;
 
-use pyo3::exceptions::{PyException, PyFileNotFoundError, PyOSError, PyPermissionError};
-use pyo3::prelude::*;
 use std::io::ErrorKind as IOErrorKind;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc};
 use std::thread::JoinHandle;
-use std::time::{Duration};
+use std::time::Duration;
 
-use crossbeam_channel::{unbounded, Receiver, RecvTimeoutError, Sender};
+use crossbeam_channel::{Receiver, RecvTimeoutError, Sender, unbounded};
+use notify::{
+    ErrorKind as NotifyErrorKind, EventKind, RecommendedWatcher,
+    RecursiveMode, Watcher as NotifyWatcher,
+};
+use notify::event::ModifyKind;
+use notify_debouncer_full::{
+    DebouncedEvent, DebounceEventResult, Debouncer, FileIdMap, new_debouncer,
+};
+use pyo3::exceptions::{PyException, PyFileNotFoundError, PyOSError, PyPermissionError};
+use pyo3::prelude::*;
 
 use crate::events::access::from_access_kind;
 use crate::events::create::from_create_kind;
 use crate::events::delete::from_delete_kind;
+use crate::events::EventType;
 use crate::events::modify::{from_data_kind, from_metadata_kind, ModifyAnyEvent, ModifyOtherEvent};
 use crate::events::rename::from_rename_mode;
-use crate::events::EventType;
-
-use notify::event::{Event as NotifyEvent, ModifyKind};
-use notify::{
-    Config as NotifyConfig, ErrorKind as NotifyErrorKind, Event, EventKind, PollWatcher, RecommendedWatcher,
-    RecursiveMode, Result as NotifyResult, Watcher as NotifyWatcher,
-};
-use notify_debouncer_full::{
-    new_debouncer, new_debouncer_opt, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
-};
 
 pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
 

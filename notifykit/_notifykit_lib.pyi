@@ -25,10 +25,25 @@ class AccessType(IntEnum):
 
 class AccessMode(IntEnum):
     Any = 0
-    Read = 1,
-    Write = 2,
-    Execute = 3,
-    Other = 4,
+    Read = 1
+    Write = 2
+    Execute = 3
+    Other = 4
+
+class DataType(IntEnum):
+    Any = 0
+    Content = 1
+    Size = 2
+    Other = 3
+
+class MetadataType(IntEnum):
+    AccessTime = 0
+    WriteTime = 1
+    Ownership = 2
+    Permissions = 3
+    Extended = 4
+    Other = 5
+    Any = 6
 
 class AccessEvent:
     path: Path
@@ -42,6 +57,17 @@ class CreateEvent:
     path: Path
     file_type: ObjectType
 
+class ModifyDataEvent:
+    path: Path
+    data_type: DataType
+
+class ModifyMetadataEvent:
+    path: Path
+    metadata_type: MetadataType
+
+class ModifyOtherEvent:
+    path: Path
+
 class DeleteEvent:
     path: Path
     file_type: ObjectType
@@ -51,7 +77,7 @@ class RenameEvent:
     new_path: Path
 
 
-Events = AccessEvent | CreateEvent | DeleteEvent | RenameEvent
+Events = AccessEvent | CreateEvent | ModifyDataEvent | ModifyMetadataEvent | ModifyOtherEvent | DeleteEvent | RenameEvent
 
 
 class WatcherWrapper:
