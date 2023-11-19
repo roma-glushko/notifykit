@@ -1,4 +1,5 @@
 from enum import IntEnum
+from pathlib import Path
 from typing import List, Optional
 
 """
@@ -6,21 +7,52 @@ The lib version
 """
 __version__: str
 
-class EventTypeAttributes(IntEnum):
-    CREATED = 0b000000
-
 class WatcherError(Exception):
     """Watcher Runtime Error"""
 
-class Event:
-    """
-    """
-    event_type: int
-    detected_at_ns: int
-    path: str
+# Main Event Groups
+
+class ObjectType(IntEnum):
+    FILE = 0
+    DIR = 1
+    OTHER = 3
+
+class AccessType(IntEnum):
+    Read = 1
+    Open = 2
+    Close = 3
+    Other = 4
+
+class AccessMode(IntEnum):
+    Any = 0
+    Read = 1,
+    Write = 2,
+    Execute = 3,
+    Other = 4,
+
+class AccessEvent:
+    path: Path
+    access_type: AccessType
+    access_mode: Optional[AccessMode]
 
     def __init__(self, event_type: int, detected_at_ns: int, path: str) -> None:
         ...
+
+class CreateEvent:
+    path: Path
+    file_type: ObjectType
+
+class DeleteEvent:
+    path: Path
+    file_type: ObjectType
+
+class RenameEvent:
+    old_path: Path
+    new_path: Path
+
+
+Events = AccessEvent | CreateEvent | DeleteEvent | RenameEvent
+
 
 class WatcherWrapper:
     """
@@ -51,7 +83,7 @@ class WatcherWrapper:
         """
         ...
 
-    def get(self) -> Optional[RawEvent]:
+    def get(self) -> Optional[Events]:
         ...
 
     def close(self) -> None:
@@ -64,181 +96,3 @@ class WatcherWrapper:
 
     def stop(self) -> None:
         ...
-
-# Main Event Groups
-
-class EventType(IntEnum):
-    CREATE = 0
-    ACCESS = 1
-    REMOVE = 2
-    MODIFY = 3
-    OTHER = 4
-
-class ObjectType(IntEnum):
-    FILE = 0
-    DIR = 1
-    OTHER = 3
-
-class RawEvent:
-    event_type: Optional[EventType]
-    object_type: Optional[ObjectType]
-
-    detected_at_ns: int
-    path: str
-
-class AccessEvent(Event):
-    """
-    """
-
-class CreateEvent(Event):
-    """
-    """
-
-    def is_file(self) -> bool:
-        ...
-
-    def is_dir(self) -> bool:
-        ...
-
-    def is_other(self) -> bool:
-        ...
-
-class RemoveEvent(Event):
-    """
-    """
-
-    def is_file(self) -> bool:
-        ...
-
-    def is_dir(self) -> bool:
-        ...
-
-    def is_other(self) -> bool:
-        ...
-
-class ModifyEvent(Event):
-    """
-    """
-
-class OtherEvent(Event):
-    """
-    An event not fitting in any of the above four categories.
-
-    This may be used for meta-events about the watch itself
-    """
-
-# Access Events
-class ReadEvent(AccessEvent):
-    """
-    """
-
-class OpenEvent(AccessEvent):
-    """
-    """
-
-class CloseEvent(AccessEvent):
-    """
-    """
-
-# Create Events
-
-class FileCreatedEvent(CreateEvent):
-    """
-    """
-
-class DirCreatedEvent(CreateEvent):
-    """
-    """
-
-class OtherCreatedEvent(CreateEvent):
-    """
-    """
-
-# Remove Events
-
-class FileRemovedEvent(RemoveEvent):
-    """
-    """
-
-class DirRemovedEvent(RemoveEvent):
-    """
-    """
-
-class OtherRemovedEvent(RemoveEvent):
-    """
-    """
-
-# Modify Events
-
-class DataChangedEvent(ModifyEvent):
-    """
-    """
-
-class MetadataModifiedEvent(ModifyEvent):
-    """
-    """
-
-class RenameEvent(ModifyEvent):
-    """
-    """
-
-
-# Data Modified Events
-
-class ContentChangedEvent(DataChangedEvent):
-    """
-    """
-
-class SizeChangedEvent(DataChangedEvent):
-    """
-    """
-
-class OtherDataChangedEvent(DataChangedEvent):
-    """
-    """
-
-# Metadata Modified Events
-
-class OwnershipModifiedEvent(MetadataModifiedEvent):
-    """
-    An event emitted when the ownership of the file or folder is changed
-    """
-
-class PermissionsModifiedEvent(MetadataModifiedEvent):
-    """
-    """
-
-class WriteTimeModifiedEvent(MetadataModifiedEvent):
-    """
-    An event emitted when write or modify time of the file or folder is changed
-    """
-
-class AccessTimeModifiedEvent(MetadataModifiedEvent):
-    """
-    """
-
-class ExtendedAttributeModifiedEvent(MetadataModifiedEvent):
-    """
-    """
-
-class OtherAttributeModifiedEvent(MetadataModifiedEvent):
-    """
-    """
-
-# Name Modified Events
-
-class RenamedToEvent(RenameEvent):
-    """
-    """
-
-class RenamedFromEvent(RenameEvent):
-    """
-    """
-
-class RenamedBothEvent(RenameEvent):
-    """
-    """
-
-class RenamedOtherEvent(RenameEvent):
-    """
-    """

@@ -2,7 +2,7 @@
 name = "notifykit_lib"
 version = "0.0.0"
 edition = "2021"
-license = "A PyO3-based binding for Python that helps to build applications that need to watch filesystem changes"
+license = "A toolkit for building applications watching filesystem changes"
 homepage = "https://github.com/roma-glushko/notifykit"
 repository = "https://github.com/roma-glushko/notifykit"
 readme = "README.md"
