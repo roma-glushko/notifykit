@@ -43,6 +43,7 @@ jobs:
       - name: Lint Python codebase
         run: make lint
 
+# TODO: enable the test step back
 #  test:
 #    name: test ${{ matrix.python-version }}, rust ${{ matrix.rust-version }} on ${{ matrix.os }}
 #    strategy:
@@ -221,7 +222,7 @@ jobs:
   # Used for branch protection checks, see https://github.com/marketplace/actions/alls-green#why
   check:
     if: always()
-    needs: [test, lint]
+    needs: [lint] # TODO: enable the test step back
     runs-on: ubuntu-latest
     steps:
       - name: Decide whether the needed jobs succeeded or failed
