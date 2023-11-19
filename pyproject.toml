@@ -6,6 +6,12 @@ authors = [
     {name = "Roman Glushko", email = "roman.glushko.m@gmail.com"},
 ]
 
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+
 dependencies = [
 ]
 
