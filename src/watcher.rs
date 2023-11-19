@@ -1,43 +1,37 @@
 extern crate notify;
 extern crate pyo3;
 
+use std::io::ErrorKind as IOErrorKind;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread::JoinHandle;
+use std::time::Duration;
+
+use crossbeam_channel::{Receiver, RecvTimeoutError, Sender, unbounded};
+use notify::{
+    ErrorKind as NotifyErrorKind, EventKind, RecommendedWatcher,
+    RecursiveMode, Watcher as NotifyWatcher,
+};
+use notify::event::ModifyKind;
+use notify_debouncer_full::{
+    DebouncedEvent, DebounceEventResult, Debouncer, FileIdMap, new_debouncer,
+};
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyOSError, PyPermissionError};
 use pyo3::prelude::*;
-use std::io::ErrorKind as IOErrorKind;
-use std::ops::Deref;
-use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
-use std::thread::JoinHandle;
-use std::time::{Duration, SystemTime};
 
-use crossbeam_channel::{unbounded, Receiver, RecvError, RecvTimeoutError, Sender};
-use crossbeam_utils::atomic::AtomicConsume;
-
-use crate::events::{
-    new_access_event, new_create_event, new_modify_data_event, new_modify_event, new_modify_metadata_event,
-    new_other_event, new_remove_event, new_rename_event, new_unknown_event, AccessMode, AccessType, DataChangeType,
-    EventAttributes, EventType, MetadataType, ModifyType, ObjectType, RawEvent, RenameType,
-};
-use notify::event::{
-    AccessKind, CreateKind, DataChange, Event as NotifyEvent, MetadataKind, ModifyKind, RemoveKind, RenameMode,
-};
-use notify::{
-    Config as NotifyConfig, ErrorKind as NotifyErrorKind, Event, EventKind, PollWatcher, RecommendedWatcher,
-    RecursiveMode, Result as NotifyResult, Watcher as NotifyWatcher,
-};
+use crate::events::access::from_access_kind;
+use crate::events::create::from_create_kind;
+use crate::events::delete::from_delete_kind;
+use crate::events::EventType;
+use crate::events::modify::{from_data_kind, from_metadata_kind, ModifyAnyEvent, ModifyOtherEvent};
+use crate::events::rename::from_rename_mode;
 
 pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
 
-type EventSender = Sender<RawEvent>;
-type EventReceiver = Receiver<RawEvent>;
-type NotificationReceiver = Receiver<NotifyResult<NotifyEvent>>;
-
-#[derive(Debug)]
-enum WatcherType {
-    Poll(PollWatcher),
-    Recommended(RecommendedWatcher),
-}
+type EventSender = Sender<EventType>;
+type EventReceiver = Receiver<EventType>;
+type NotificationReceiver = Receiver<DebounceEventResult>;
 
 #[derive(Debug)]
 pub(crate) struct Watcher {
@@ -45,85 +39,42 @@ pub(crate) struct Watcher {
     notification_receiver: NotificationReceiver,
     event_receiver: EventReceiver,
     event_sender: EventSender,
-    watcher: WatcherType,
+    debouncer: Debouncer<RecommendedWatcher, FileIdMap>,
     listen_thread: Option<JoinHandle<()>>,
     stop_listening: Arc<AtomicBool>,
 }
 
 impl Watcher {
-    pub fn new(debug: bool, force_polling: bool, poll_delay_ms: u64) -> PyResult<Self> {
-        if force_polling {
-            return Self::new_poll_watcher(debug, poll_delay_ms);
-        }
-
-        return Self::new_recommended_watcher(debug, poll_delay_ms);
-    }
-
-    fn new_poll_watcher(debug: bool, poll_delay_ms: u64) -> PyResult<Watcher> {
+    pub fn new(debounce_ms: u64, debounce_tick_rate_ms: Option<u64>, debug: bool) -> PyResult<Self> {
         let (notification_sender, notification_receiver) = unbounded();
-        let delay = Duration::from_millis(poll_delay_ms);
-        let config = NotifyConfig::default().with_poll_interval(delay);
 
-        let watcher = match PollWatcher::new(notification_sender, config) {
-            Ok(watcher) => watcher,
+        let debounce_tick_rate = match debounce_tick_rate_ms {
+            Some(tick_rate_ms) => Some(Duration::from_millis(tick_rate_ms)),
+            None => None,
+        };
+
+        // The logic that debouncer incorporates is the heart of notifykit,
+        // so it's possible we may need to take under the umbrella of
+        // the project to further improve if needed
+        let result = new_debouncer(
+            Duration::from_millis(debounce_ms),
+            debounce_tick_rate,
+            notification_sender,
+        ); // TODO: handle this error
+
+        let debouncer = match result {
+            Ok(debouncer) => debouncer,
             Err(e) => return Err(WatcherError::new_err(format!("Error creating poll watcher: {}", e))),
         };
 
-        let (event_sender, event_receiver) = unbounded::<RawEvent>();
+        let (event_sender, event_receiver) = unbounded::<EventType>();
 
         Ok(Watcher {
             debug,
             notification_receiver,
             event_receiver,
             event_sender,
-            watcher: WatcherType::Poll(watcher),
-            listen_thread: None,
-            stop_listening: Arc::new(AtomicBool::new(false)),
-        })
-    }
-
-    fn new_recommended_watcher(debug: bool, poll_delay_ms: u64) -> PyResult<Watcher> {
-        let (notification_sender, notification_receiver) = unbounded();
-
-        let watcher = match RecommendedWatcher::new(notification_sender, NotifyConfig::default()) {
-            Ok(watcher) => watcher,
-            Err(error) => {
-                return match &error.kind {
-                    NotifyErrorKind::Io(notify_error) => {
-                        if notify_error.raw_os_error() == Some(38) {
-                            // fall back to PollWatcher
-
-                            if debug {
-                                eprintln!(
-                                    "Error using recommend watcher: {:?}, falling back to PollWatcher",
-                                    notify_error
-                                );
-                            }
-
-                            return Self::new_poll_watcher(debug, poll_delay_ms);
-                        }
-
-                        Err(WatcherError::new_err(format!(
-                            "Error creating recommended watcher: {}",
-                            error
-                        )))
-                    }
-                    _ => Err(WatcherError::new_err(format!(
-                        "Error creating recommended watcher: {}",
-                        error
-                    ))),
-                };
-            }
-        };
-
-        let (event_sender, event_receiver) = unbounded::<RawEvent>();
-
-        Ok(Watcher {
-            debug,
-            notification_receiver,
-            event_receiver,
-            event_sender,
-            watcher: WatcherType::Recommended(watcher),
+            debouncer,
             listen_thread: None,
             stop_listening: Arc::new(AtomicBool::new(false)),
         })
@@ -146,10 +97,7 @@ impl Watcher {
                 )));
             }
 
-            let result = match self.watcher {
-                WatcherType::Recommended(ref mut w) => w.watch(path, mode),
-                WatcherType::Poll(ref mut w) => w.watch(path, mode),
-            };
+            let result = self.debouncer.watcher().watch(path, mode);
 
             match result {
                 Err(err) => {
@@ -159,10 +107,12 @@ impl Watcher {
                 }
                 _ => (),
             }
+
+            self.debouncer.cache().add_root(path, mode);
         }
 
         if self.debug {
-            eprintln!("watcher: {:?}", self.watcher);
+            eprintln!("watcher: {:?}", self.debouncer.watcher());
         }
 
         Ok(())
@@ -172,10 +122,7 @@ impl Watcher {
         for path_str in paths.into_iter() {
             let path = Path::new(&path_str);
 
-            let result = match self.watcher {
-                WatcherType::Recommended(ref mut w) => w.unwatch(path),
-                WatcherType::Poll(ref mut w) => w.unwatch(path),
-            };
+            let result = self.debouncer.watcher().unwatch(path);
 
             match result {
                 Err(err) => {
@@ -183,77 +130,47 @@ impl Watcher {
                 }
                 _ => (),
             }
+
+            self.debouncer.cache().remove_root(path);
         }
 
         if self.debug {
-            eprintln!("watcher: {:?}", self.watcher);
+            eprintln!("watcher: {:?}", self.debouncer.watcher());
         }
 
         Ok(())
     }
 
-    fn create_event(path: String, notification: &Event) -> RawEvent {
-        let detected_at_ns = Self::get_current_time_ns();
+    fn create_event(event: &DebouncedEvent) -> Option<EventType> {
+        let paths = &event.paths;
+        let file_path: PathBuf = paths.first().unwrap().to_owned();
 
-        // TODO: fill it with raw_event.attrs info
-        let attrs = EventAttributes { tracker: None };
-
-        // TODO: find more readable way to remap event data
-        return match notification.kind {
-            EventKind::Create(create_kind) => match create_kind {
-                CreateKind::File => new_create_event(Some(ObjectType::File), detected_at_ns, path, attrs),
-                CreateKind::Folder => new_create_event(Some(ObjectType::Dir), detected_at_ns, path, attrs),
-                CreateKind::Other => new_create_event(Some(ObjectType::Other), detected_at_ns, path, attrs),
-                CreateKind::Any => new_create_event(None, detected_at_ns, path, attrs),
-            },
-            EventKind::Remove(remove_kind) => match remove_kind {
-                RemoveKind::File => new_remove_event(Some(ObjectType::File), detected_at_ns, path, attrs),
-                RemoveKind::Folder => new_remove_event(Some(ObjectType::Dir), detected_at_ns, path, attrs),
-                RemoveKind::Other => new_remove_event(Some(ObjectType::Other), detected_at_ns, path, attrs),
-                RemoveKind::Any => new_remove_event(None, detected_at_ns, path, attrs),
-            },
-            EventKind::Access(access_kind) => match access_kind {
-                AccessKind::Open(access_mode) => new_access_event(
-                    Some(AccessType::Open),
-                    AccessMode::from_raw(access_mode),
-                    detected_at_ns,
-                    path,
-                    attrs,
-                ),
-                AccessKind::Read => new_access_event(Some(AccessType::Read), None, detected_at_ns, path, attrs),
-                AccessKind::Close(access_mode) => new_access_event(
-                    Some(AccessType::Close),
-                    AccessMode::from_raw(access_mode),
-                    detected_at_ns,
-                    path,
-                    attrs,
-                ),
-                AccessKind::Other => new_access_event(Some(AccessType::Other), None, detected_at_ns, path, attrs),
-                AccessKind::Any => new_access_event(None, None, detected_at_ns, path, attrs),
-            },
+        return Some(match event.kind {
+            EventKind::Access(access_kind) => EventType::Access(from_access_kind(file_path, access_kind)),
+            EventKind::Create(create_kind) => EventType::Create(from_create_kind(file_path, create_kind)),
+            EventKind::Remove(delete_kind) => EventType::Delete(from_delete_kind(file_path, delete_kind)),
             EventKind::Modify(modify_kind) => match modify_kind {
                 ModifyKind::Metadata(metadata_kind) => {
-                    new_modify_metadata_event(MetadataType::from_raw(metadata_kind), detected_at_ns, path, attrs)
+                    EventType::ModifyMetadata(from_metadata_kind(file_path, metadata_kind))
                 }
-                ModifyKind::Data(data_changed) => {
-                    new_modify_data_event(DataChangeType::from_raw(data_changed), detected_at_ns, path, attrs)
+                ModifyKind::Data(data_kind) => EventType::ModifyData(from_data_kind(file_path, data_kind)),
+                ModifyKind::Name(_) => {
+                    // Debouncer stitches rename events, so rename_kind is not relevant
+                    let target_path = paths.last().cloned()?;
+
+                    return Some(EventType::Rename(from_rename_mode(file_path, target_path)));
                 }
-                ModifyKind::Name(rename_mode) => match rename_mode {
-                    RenameMode::From => new_rename_event(Some(RenameType::From), detected_at_ns, path, attrs),
-                    RenameMode::To => new_rename_event(Some(RenameType::To), detected_at_ns, path, attrs),
-                    RenameMode::Both => new_rename_event(Some(RenameType::Both), detected_at_ns, path, attrs), // TODO: parse the second path
-                    RenameMode::Other => new_rename_event(Some(RenameType::Other), detected_at_ns, path, attrs),
-                    RenameMode::Any => new_rename_event(None, detected_at_ns, path, attrs),
-                },
-                ModifyKind::Other => new_modify_event(Some(ModifyType::Other), detected_at_ns, path, attrs),
-                ModifyKind::Any => new_modify_event(None, detected_at_ns, path, attrs),
+                ModifyKind::Other => EventType::ModifyOther(ModifyOtherEvent::new(file_path)),
+                ModifyKind::Any => EventType::ModifyAny(ModifyAnyEvent::new(file_path)),
             },
-            EventKind::Other => new_other_event(detected_at_ns, path, attrs),
-            EventKind::Any => new_unknown_event(detected_at_ns, path, attrs),
-        };
+            EventKind::Other | EventKind::Any => {
+                // Debouncer ignores these events, so we are not going to receive them
+                return None;
+            }
+        });
     }
 
-    pub fn get(&self, timeout: Duration) -> Result<Option<RawEvent>, RecvTimeoutError> {
+    pub fn get(&self, timeout: Duration) -> Result<Option<EventType>, RecvTimeoutError> {
         if self.event_receiver.len() == 0 && self.listen_thread.is_none() {
             return Ok(None);
         }
@@ -261,7 +178,7 @@ impl Watcher {
         return Ok(Some(self.event_receiver.recv_timeout(timeout)?));
     }
 
-    pub fn start(&mut self) {
+    pub fn start(&mut self, tick_rate_ms: u64) {
         let notification_receiver = self.notification_receiver.clone();
         let event_sender = self.event_sender.clone();
         let stop_listening = self.stop_listening.clone();
@@ -269,27 +186,20 @@ impl Watcher {
 
         let listen_thread = std::thread::spawn(move || {
             while !stop_listening.load(Ordering::Relaxed) {
-                let timeout = Duration::from_millis(400);
+                let timeout = Duration::from_millis(tick_rate_ms);
                 let timed_out_result = &notification_receiver.recv_timeout(timeout);
 
                 match timed_out_result {
                     Ok(notification_result) => match notification_result {
-                        Ok(notification) => {
+                        Ok(notifications) => {
                             if debug {
-                                println!("{:?}", notification);
+                                println!("{:?}", notifications);
                             }
 
-                            if let Some(path_buf) = notification.paths.first() {
-                                let path = match path_buf.to_str() {
-                                    Some(s) => s.to_string(),
-                                    None => {
-                                        continue;
-                                    }
-                                };
-
-                                let raw_event = Self::create_event(path, notification);
-
-                                event_sender.send(raw_event).unwrap();
+                            for raw_notification in notifications {
+                                if let Some(event) = Self::create_event(raw_notification) {
+                                    event_sender.send(event).unwrap();
+                                }
                             }
                         }
                         Err(e) => {
@@ -311,6 +221,8 @@ impl Watcher {
 
     pub fn stop(&mut self) {
         if let Some(listen_thread) = self.listen_thread.take() {
+            // self.debouncer.stop();
+
             self.stop_listening.store(true, Ordering::Relaxed);
 
             listen_thread.join().unwrap();
@@ -318,15 +230,8 @@ impl Watcher {
         }
     }
 
-    pub fn repr(&self) -> String {
-        return format!("Watcher({:#?})", self.watcher);
-    }
-
-    fn get_current_time_ns() -> u128 {
-        SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
+    pub fn repr(&mut self) -> String {
+        return format!("Watcher({:#?})", self.debouncer.watcher());
     }
 
     fn map_notify_error(notify_error: notify::Error) -> PyErr {

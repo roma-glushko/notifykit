@@ -1,7 +1,7 @@
 from os import PathLike
-from typing import Sequence, Protocol
+from typing import Sequence, Protocol, Optional
 
-from notifykit._notifykit_lib import WatcherWrapper, RawEvent
+from notifykit._notifykit_lib import WatcherWrapper, Events
 
 
 class NotifierT(Protocol):
@@ -29,10 +29,10 @@ class Notifier:
     Notifier collects filesystem events from the underlying watcher and expose them via sync/async API
     """
 
-    def __init__(self, debug: bool = False, force_polling: bool = False, poll_delay_ms: int = 50) -> None:
+    def __init__(self,  debounce_ms: int, debounce_tick_rate_ms: Optional[int] = None, debug: bool = False) -> None:
         self._debug = debug
 
-        self._watcher = WatcherWrapper(debug, force_polling, poll_delay_ms)
+        self._watcher = WatcherWrapper(debounce_ms, debounce_tick_rate_ms, debug)
 
     def watch(self, paths: Sequence[PathLike], recursive: bool = True, ignore_permission_errors: bool = False) -> None:
         self._watcher.watch([str(path) for path in paths], recursive, ignore_permission_errors)
@@ -40,7 +40,7 @@ class Notifier:
     def unwatch(self, paths: Sequence[str]) -> None:
         self._watcher.unwatch(list(paths))
 
-    def get(self) -> RawEvent:
+    def get(self) -> Events:
         return self._watcher.get()
 
     def __enter__(self) -> "Notifier":
@@ -60,7 +60,7 @@ class Notifier:
     def __iter__(self) -> "Notifier":
         return self
 
-    def __next__(self) -> RawEvent:
+    def __next__(self) -> Events:
         event = self._watcher.get()
 
         if event is None:

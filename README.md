@@ -8,7 +8,7 @@
 **notifykit** is a set of components for building modern Python applications with a need for watching filesystem events efficiently.
 
 > [!Warning]
-> notify-tookit is under active development right now
+> notifykit is under active development right now
 
 ## Features
 
