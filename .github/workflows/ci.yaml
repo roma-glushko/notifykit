@@ -43,55 +43,59 @@ jobs:
       - name: Lint Python codebase
         run: make lint
 
-# TODO: enable the test step back
-#  test:
-#    name: test ${{ matrix.python-version }}, rust ${{ matrix.rust-version }} on ${{ matrix.os }}
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        os: [ubuntu, macos]
-#        rust-version: [stable, '1.65.0']
-#        python-version:
-#          - '3.8'
-#          - '3.9'
-#          - '3.10'
-#          - '3.11'
-#        exclude:
-#          - rust-version: '1.65.0'
-#            os: macos
-#
-#    runs-on: ${{ matrix.os }}-latest
-#
-#    env:
-#      PYTHON: ${{ matrix.python-version }}
-#      RUST: ${{ matrix.rust-version }}
-#      OS: ${{ matrix.os }}
-#
-#    steps:
-#      - uses: actions/checkout@v3
-#
-#      - name: set up python
-#        uses: actions/setup-python@v4
-#        with:
-#          python-version: ${{ matrix.python-version }}
-#
-#      - name: install rust
-#        uses: actions-rs/toolchain@v1
-#        with:
-#          profile: minimal
-#          toolchain: ${{ matrix.rust-version }}
-#          override: true
-#
-#      - name: cache rust
-#        uses: Swatinem/rust-cache@v1
-#
-#      - name: Setup PDM
-#        uses: pdm-project/setup-pdm@v3
-#
-#      # You are now able to use PDM in your workflow
-#      - name: Install dependencies
-#        run: pdm install
-#
+  test:
+    name: test ${{ matrix.python-version }}, rust ${{ matrix.rust-version }} on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu, macos]
+        rust-version: [stable, '1.65.0']
+        python-version:
+          - '3.8'
+          - '3.9'
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - 'pypy3.8'
+          - 'pypy3.9'
+          - 'pypy3.10'
+        exclude:
+          - rust-version: '1.65.0'
+            os: macos
+
+    runs-on: ${{ matrix.os }}-latest
+
+    env:
+      PYTHON: ${{ matrix.python-version }}
+      RUST: ${{ matrix.rust-version }}
+      OS: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: set up python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust-version }}
+          override: true
+
+      - name: cache rust
+        uses: Swatinem/rust-cache@v1
+
+      - name: Setup PDM
+        uses: pdm-project/setup-pdm@v3
+
+      # You are now able to use PDM in your workflow
+      - name: Install dependencies
+        run: pdm install
+
+      # TODO: enable the test step back
 #      - run: make test
 #      - run: coverage xml
 #      - uses: codecov/codecov-action@v1.0.13
@@ -113,32 +117,39 @@ jobs:
           - os: ubuntu
             platform: linux
             pypy: true
+
           - os: macos
             target: x86_64
             pypy: true
+
           - os: ubuntu
             platform: linux
             target: i686
+
           - os: ubuntu
             platform: linux
             target: armv7
             container: messense/manylinux_2_24-cross:armv7
-            interpreter: 3.8 3.9 3.10 3.11 3.12
+
           - os: ubuntu
             platform: linux
             target: ppc64le
+
           - os: ubuntu
             platform: linux
             target: s390x
+
           # musllinux
           - os: ubuntu
             platform: linux
             target: x86_64
             manylinux: musllinux_1_1
+
           - os: ubuntu
             platform: linux
             target: aarch64
             manylinux: musllinux_1_1
+
           - os: ubuntu
             platform: linux
             target: aarch64
@@ -162,7 +173,7 @@ jobs:
           command: sdist
           args: --out dist
 
-      - name: build wheels
+      - name: build CPython wheels
         uses: messense/maturin-action@v1
         with:
           target: ${{ matrix.target }}
@@ -172,7 +183,7 @@ jobs:
           rust-toolchain: stable
           docker-options: -e CI
 
-      - name: build pypy wheels
+      - name: build PyPy wheels
         if: ${{ matrix.pypy }}
         uses: messense/maturin-action@v1
         with:
@@ -213,7 +224,7 @@ jobs:
 
       - name: extract and list wheel file
         run: |
-          ls dist/*cp310-manylinux*x86_64.whl | head -n 1
+          ls dist/*cp312-manylinux_2_17_x86_64*.whl | head -n 1
           python -m zipfile --list `ls dist/*cp312-manylinux_2_17_x86_64*.whl | head -n 1`
 
       - run: pip install twine
