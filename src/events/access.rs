@@ -15,13 +15,13 @@ pub enum AccessType {
 
 impl From<AccessKind> for AccessType {
     fn from(kind: AccessKind) -> Self {
-        return match kind {
+        match kind {
             AccessKind::Read => AccessType::Read,
             AccessKind::Open(_) => AccessType::Open,
             AccessKind::Close(_) => AccessType::Close,
             AccessKind::Other => AccessType::Other,
             AccessKind::Any => AccessType::Any,
-        };
+        }
     }
 }
 
@@ -37,13 +37,13 @@ pub enum AccessMode {
 
 impl From<NotifyAccessMode> for AccessMode {
     fn from(kind: NotifyAccessMode) -> Self {
-        return match kind {
+        match kind {
             NotifyAccessMode::Read => AccessMode::Read,
             NotifyAccessMode::Write => AccessMode::Write,
             NotifyAccessMode::Execute => AccessMode::Execute,
             NotifyAccessMode::Other => AccessMode::Other,
             NotifyAccessMode::Any => AccessMode::Any,
-        };
+        }
     }
 }
 

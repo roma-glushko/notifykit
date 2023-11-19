@@ -9,9 +9,15 @@ help:
 	@echo "============="
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-lib-lint:  ## Lint the library codebase (Rust)
+lib-lint-check:  ## Lint the library codebase (Rust)
 	@cargo fmt --version
 	@cargo fmt --all -- --check
+	@cargo clippy --version
+	@cargo clippy -- -D warnings
+
+lib-lint:  ## Lint the library codebase (Rust)
+	@cargo fmt --version
+	@cargo fmt --all
 	@cargo clippy --version
 	@cargo clippy -- -D warnings
 

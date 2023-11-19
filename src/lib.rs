@@ -22,10 +22,10 @@ pub struct WatcherWrapper {
 #[pymethods]
 impl WatcherWrapper {
     #[new]
-    fn __init__(debounce_ms: u64, debounce_tick_rate_ms: Option<u64>, debug: bool) -> PyResult<Self> {
+    fn __init__(debounce_ms: u64, debug: bool, debounce_tick_rate_ms: Option<u64>) -> PyResult<Self> {
         let watcher = Watcher::new(debounce_ms, debounce_tick_rate_ms, debug);
 
-        return Ok(WatcherWrapper { watcher: watcher? });
+        Ok(WatcherWrapper { watcher: watcher? })
     }
 
     pub fn get(&self, py: Python) -> PyResult<Option<PyObject>> {
@@ -64,11 +64,11 @@ impl WatcherWrapper {
     }
 
     pub fn watch(&mut self, paths: Vec<String>, recursive: bool, ignore_permission_errors: bool) -> PyResult<()> {
-        Ok(self.watcher.watch(paths, recursive, ignore_permission_errors)?)
+        self.watcher.watch(paths, recursive, ignore_permission_errors)
     }
 
     pub fn unwatch(&mut self, paths: Vec<String>) -> PyResult<()> {
-        Ok(self.watcher.unwatch(paths)?)
+        self.watcher.unwatch(paths)
     }
 
     pub fn __repr__(&mut self) -> PyResult<String> {
