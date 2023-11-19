@@ -167,6 +167,13 @@ jobs:
           command: sdist
           args: --out dist
 
+      - name: list available Python versions
+        uses: messense/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux || 'auto' }}
+          command: list-python
+
       - name: build CPython wheels
         uses: messense/maturin-action@v1
         with:
