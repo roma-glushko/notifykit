@@ -33,7 +33,7 @@ class Notifier:
     def __init__(self, debounce_ms: int, debounce_tick_rate_ms: Optional[int] = None, debug: bool = False) -> None:
         self._debug = debug
 
-        self._watcher = WatcherWrapper(debounce_ms, debounce_tick_rate_ms, debug)
+        self._watcher = WatcherWrapper(debounce_ms, debug, debounce_tick_rate_ms)
 
     def watch(
         self, paths: Sequence[PathLike[str]], recursive: bool = True, ignore_permission_errors: bool = False
