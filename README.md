@@ -10,6 +10,22 @@
 > [!Warning]
 > notifykit is under active development right now
 
+## Installation
+
+```bash
+pip install notifykit
+# or
+poetry add notifykit
+# or 
+pdm add notifykit
+```
+
+notifykit is available for Python 3.8 - 3.12 on the following platforms:
+
+- **Linux**: x86_64, aarch64, x86, armv7, s390x, ppc64le, musl-x86_64, musl-aarch64
+- **MacOS**: x86_64 & arm64
+- **Windows**: x64 & x86
+
 ## Features
 
 - Simple Modern Pythonic API, both sync and async
