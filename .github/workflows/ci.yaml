@@ -131,7 +131,7 @@ jobs:
           target: ${{ matrix.target }}
           args: --release --out dist
           sccache: 'true'
-          manylinux: auto
+          manylinux: ${{ matrix.manylinux || 'auto' }}
 
       - name: Build PyPy wheels
         if: ${{ matrix.manylinux == 'auto' && (matrix.target == 'x86_64' || matrix.target == 'aarch64') }}
