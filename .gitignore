@@ -1,9 +1,13 @@
 .idea
 .pdm-python
-target
 .venv
+
+dist
+target
 
 tmp
 
+.mypy_cache
+.ruff_cache
 *.so
 *.pyc
