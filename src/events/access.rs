@@ -6,21 +6,21 @@ use std::path::PathBuf;
 #[pyclass]
 #[derive(Debug, Copy, Clone)]
 pub enum AccessType {
-    Any = 0,
-    Read = 1,
-    Open = 2,
-    Close = 3,
-    Other = 4,
+    UNKNOWN = 0,
+    READ = 1,
+    OPEN = 2,
+    CLOSE = 3,
+    OTHER = 4,
 }
 
 impl From<AccessKind> for AccessType {
     fn from(kind: AccessKind) -> Self {
         match kind {
-            AccessKind::Read => AccessType::Read,
-            AccessKind::Open(_) => AccessType::Open,
-            AccessKind::Close(_) => AccessType::Close,
-            AccessKind::Other => AccessType::Other,
-            AccessKind::Any => AccessType::Any,
+            AccessKind::Read => AccessType::READ,
+            AccessKind::Open(_) => AccessType::OPEN,
+            AccessKind::Close(_) => AccessType::CLOSE,
+            AccessKind::Other => AccessType::OTHER,
+            AccessKind::Any => AccessType::UNKNOWN,
         }
     }
 }
@@ -28,35 +28,23 @@ impl From<AccessKind> for AccessType {
 #[pyclass]
 #[derive(Debug, Copy, Clone)]
 pub enum AccessMode {
-    Any = 0,
-    Read = 1,
-    Write = 2,
-    Execute = 3,
-    Other = 4,
+    UNKNOWN = 0,
+    READ = 1,
+    WRITE = 2,
+    EXECUTE = 3,
+    OTHER = 4,
 }
 
 impl From<NotifyAccessMode> for AccessMode {
     fn from(kind: NotifyAccessMode) -> Self {
         match kind {
-            NotifyAccessMode::Read => AccessMode::Read,
-            NotifyAccessMode::Write => AccessMode::Write,
-            NotifyAccessMode::Execute => AccessMode::Execute,
-            NotifyAccessMode::Other => AccessMode::Other,
-            NotifyAccessMode::Any => AccessMode::Any,
+            NotifyAccessMode::Read => AccessMode::READ,
+            NotifyAccessMode::Write => AccessMode::WRITE,
+            NotifyAccessMode::Execute => AccessMode::EXECUTE,
+            NotifyAccessMode::Other => AccessMode::OTHER,
+            NotifyAccessMode::Any => AccessMode::UNKNOWN,
         }
     }
-}
-
-#[pyclass]
-#[derive(Debug, Copy, Clone)]
-pub enum MetadataType {
-    AccessTime = 0,
-    WriteTime = 1,
-    Ownership = 2,
-    Permissions = 3,
-    Extended = 4,
-    Other = 5,
-    Any = 6,
 }
 
 #[pyclass]

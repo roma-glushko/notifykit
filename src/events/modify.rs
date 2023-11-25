@@ -5,25 +5,25 @@ use std::path::PathBuf;
 #[pyclass]
 #[derive(Debug, Clone)]
 pub enum MetadataType {
-    AccessTime = 0,
-    WriteTime = 1,
-    Ownership = 2,
-    Permissions = 3,
-    Extended = 4,
-    Other = 5,
-    Any = 6,
+    UNKNOWN = 0,
+    ACCESS_TIME = 1,
+    WRITE_TIME = 2,
+    OWNERSHIP = 3,
+    PERMISSIONS = 4,
+    EXTENDED = 5,
+    OTHER = 6,
 }
 
 impl From<MetadataKind> for MetadataType {
     fn from(kind: MetadataKind) -> Self {
         match kind {
-            MetadataKind::AccessTime => Self::AccessTime,
-            MetadataKind::WriteTime => Self::WriteTime,
-            MetadataKind::Ownership => Self::Ownership,
-            MetadataKind::Permissions => Self::Permissions,
-            MetadataKind::Extended => Self::Extended,
-            MetadataKind::Other => Self::Other,
-            MetadataKind::Any => Self::Any,
+            MetadataKind::AccessTime => Self::ACCESS_TIME,
+            MetadataKind::WriteTime => Self::WRITE_TIME,
+            MetadataKind::Ownership => Self::OWNERSHIP,
+            MetadataKind::Permissions => Self::PERMISSIONS,
+            MetadataKind::Extended => Self::EXTENDED,
+            MetadataKind::Other => Self::OWNERSHIP,
+            MetadataKind::Any => Self::UNKNOWN,
         }
     }
 }
@@ -31,19 +31,19 @@ impl From<MetadataKind> for MetadataType {
 #[pyclass]
 #[derive(Debug, Clone)]
 pub enum DataType {
-    Any = 0,
-    Content = 1,
-    Size = 2,
-    Other = 3,
+    UNKNOWN = 0,
+    CONTENT = 1,
+    SIZE = 2,
+    OTHER = 3,
 }
 
 impl From<DataChange> for DataType {
     fn from(kind: DataChange) -> Self {
         match kind {
-            DataChange::Content => Self::Content,
-            DataChange::Size => Self::Size,
-            DataChange::Other => Self::Other,
-            DataChange::Any => Self::Any,
+            DataChange::Content => Self::CONTENT,
+            DataChange::Size => Self::SIZE,
+            DataChange::Other => Self::OTHER,
+            DataChange::Any => Self::UNKNOWN,
         }
     }
 }
@@ -133,13 +133,13 @@ impl ModifyOtherEvent {
 
 #[pyclass]
 #[derive(Debug, Clone)]
-pub struct ModifyAnyEvent {
+pub struct ModifyUnknownEvent {
     #[pyo3(get)]
     pub path: PathBuf,
 }
 
 #[pymethods]
-impl ModifyAnyEvent {
+impl ModifyUnknownEvent {
     #[new]
     pub fn new(path: PathBuf) -> Self {
         Self { path }

@@ -5,19 +5,19 @@ use std::convert::From;
 #[pyclass]
 #[derive(Debug, Clone)]
 pub enum ObjectType {
-    Any = 0,
-    File = 1,
-    Dir = 2,
-    Other = 3,
+    UNKNOWN = 0,
+    FILE = 1,
+    DIR = 2,
+    OTHER = 3,
 }
 
 impl From<CreateKind> for ObjectType {
     fn from(kind: CreateKind) -> Self {
         match kind {
-            CreateKind::Any => ObjectType::Any,
-            CreateKind::File => ObjectType::File,
-            CreateKind::Folder => ObjectType::Dir,
-            CreateKind::Other => ObjectType::Other,
+            CreateKind::Any => ObjectType::UNKNOWN,
+            CreateKind::File => ObjectType::FILE,
+            CreateKind::Folder => ObjectType::DIR,
+            CreateKind::Other => ObjectType::OTHER,
         }
     }
 }
@@ -25,10 +25,10 @@ impl From<CreateKind> for ObjectType {
 impl From<RemoveKind> for ObjectType {
     fn from(kind: RemoveKind) -> Self {
         match kind {
-            RemoveKind::Any => ObjectType::Any,
-            RemoveKind::File => ObjectType::File,
-            RemoveKind::Folder => ObjectType::Dir,
-            RemoveKind::Other => ObjectType::Other,
+            RemoveKind::Any => ObjectType::UNKNOWN,
+            RemoveKind::File => ObjectType::FILE,
+            RemoveKind::Folder => ObjectType::DIR,
+            RemoveKind::Other => ObjectType::OTHER,
         }
     }
 }

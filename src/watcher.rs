@@ -18,7 +18,7 @@ use pyo3::prelude::*;
 use crate::events::access::from_access_kind;
 use crate::events::create::from_create_kind;
 use crate::events::delete::from_delete_kind;
-use crate::events::modify::{from_data_kind, from_metadata_kind, ModifyAnyEvent, ModifyOtherEvent};
+use crate::events::modify::{from_data_kind, from_metadata_kind, ModifyUnknownEvent, ModifyOtherEvent};
 use crate::events::rename::from_rename_mode;
 use crate::events::EventType;
 
@@ -145,7 +145,7 @@ impl Watcher {
                     return Some(EventType::Rename(from_rename_mode(file_path, target_path)));
                 }
                 ModifyKind::Other => EventType::ModifyOther(ModifyOtherEvent::new(file_path)),
-                ModifyKind::Any => EventType::ModifyAny(ModifyAnyEvent::new(file_path)),
+                ModifyKind::Any => EventType::ModifyUnknown(ModifyUnknownEvent::new(file_path)),
             },
             EventKind::Other | EventKind::Any => {
                 // Debouncer ignores these events, so we are not going to receive them
