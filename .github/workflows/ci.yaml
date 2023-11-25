@@ -134,6 +134,7 @@ jobs:
           manylinux: auto
 
       - name: Build PyPy wheels
+        if: ${{ matrix.target == 'x86_64' || matrix.target == 'aarch64' }}
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
@@ -196,6 +197,7 @@ jobs:
         with:
           python-version: '3.11'
           architecture: ${{ matrix.target }}
+
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -212,7 +214,7 @@ jobs:
           path: dist
 
   sdist:
-    name: SDist
+    name: sdist
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
