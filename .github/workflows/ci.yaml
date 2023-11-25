@@ -134,7 +134,7 @@ jobs:
           manylinux: auto
 
       - name: Build PyPy wheels
-        if: ${{ matrix.target == 'x86_64' || matrix.target == 'aarch64' }}
+        if: ${{ matrix.manylinux == 'auto' && (matrix.target == 'x86_64' || matrix.target == 'aarch64') }}
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
