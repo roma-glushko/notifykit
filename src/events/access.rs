@@ -3,46 +3,46 @@ use pyo3::prelude::*;
 use std::convert::From;
 use std::path::PathBuf;
 
-#[pyclass]
+#[pyclass(rename_all = "SCREAMING_SNAKE_CASE")]
 #[derive(Debug, Copy, Clone)]
 pub enum AccessType {
-    UNKNOWN = 0,
-    READ = 1,
-    OPEN = 2,
-    CLOSE = 3,
-    OTHER = 4,
+    Unknown = 0,
+    Read = 1,
+    Open = 2,
+    Close = 3,
+    Other = 4,
 }
 
 impl From<AccessKind> for AccessType {
     fn from(kind: AccessKind) -> Self {
         match kind {
-            AccessKind::Read => AccessType::READ,
-            AccessKind::Open(_) => AccessType::OPEN,
-            AccessKind::Close(_) => AccessType::CLOSE,
-            AccessKind::Other => AccessType::OTHER,
-            AccessKind::Any => AccessType::UNKNOWN,
+            AccessKind::Read => AccessType::Read,
+            AccessKind::Open(_) => AccessType::Open,
+            AccessKind::Close(_) => AccessType::Close,
+            AccessKind::Other => AccessType::Other,
+            AccessKind::Any => AccessType::Unknown,
         }
     }
 }
 
-#[pyclass]
+#[pyclass(rename_all = "SCREAMING_SNAKE_CASE")]
 #[derive(Debug, Copy, Clone)]
 pub enum AccessMode {
-    UNKNOWN = 0,
-    READ = 1,
-    WRITE = 2,
-    EXECUTE = 3,
-    OTHER = 4,
+    Unknown = 0,
+    Read = 1,
+    Write = 2,
+    Execute = 3,
+    Other = 4,
 }
 
 impl From<NotifyAccessMode> for AccessMode {
     fn from(kind: NotifyAccessMode) -> Self {
         match kind {
-            NotifyAccessMode::Read => AccessMode::READ,
-            NotifyAccessMode::Write => AccessMode::WRITE,
-            NotifyAccessMode::Execute => AccessMode::EXECUTE,
-            NotifyAccessMode::Other => AccessMode::OTHER,
-            NotifyAccessMode::Any => AccessMode::UNKNOWN,
+            NotifyAccessMode::Read => AccessMode::Read,
+            NotifyAccessMode::Write => AccessMode::Write,
+            NotifyAccessMode::Execute => AccessMode::Execute,
+            NotifyAccessMode::Other => AccessMode::Other,
+            NotifyAccessMode::Any => AccessMode::Unknown,
         }
     }
 }

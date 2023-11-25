@@ -2,48 +2,48 @@ use notify::event::{DataChange, MetadataKind};
 use pyo3::prelude::*;
 use std::path::PathBuf;
 
-#[pyclass]
+#[pyclass(rename_all = "SCREAMING_SNAKE_CASE")]
 #[derive(Debug, Clone)]
 pub enum MetadataType {
-    UNKNOWN = 0,
-    ACCESS_TIME = 1,
-    WRITE_TIME = 2,
-    OWNERSHIP = 3,
-    PERMISSIONS = 4,
-    EXTENDED = 5,
-    OTHER = 6,
+    Unknown = 0,
+    AccessTime = 1,
+    WriteTime = 2,
+    Ownership = 3,
+    Permissions = 4,
+    Extended = 5,
+    Other = 6,
 }
 
 impl From<MetadataKind> for MetadataType {
     fn from(kind: MetadataKind) -> Self {
         match kind {
-            MetadataKind::AccessTime => Self::ACCESS_TIME,
-            MetadataKind::WriteTime => Self::WRITE_TIME,
-            MetadataKind::Ownership => Self::OWNERSHIP,
-            MetadataKind::Permissions => Self::PERMISSIONS,
-            MetadataKind::Extended => Self::EXTENDED,
-            MetadataKind::Other => Self::OWNERSHIP,
-            MetadataKind::Any => Self::UNKNOWN,
+            MetadataKind::AccessTime => Self::AccessTime,
+            MetadataKind::WriteTime => Self::WriteTime,
+            MetadataKind::Ownership => Self::Ownership,
+            MetadataKind::Permissions => Self::Permissions,
+            MetadataKind::Extended => Self::Extended,
+            MetadataKind::Other => Self::Other,
+            MetadataKind::Any => Self::Unknown,
         }
     }
 }
 
-#[pyclass]
+#[pyclass(rename_all = "SCREAMING_SNAKE_CASE")]
 #[derive(Debug, Clone)]
 pub enum DataType {
-    UNKNOWN = 0,
-    CONTENT = 1,
-    SIZE = 2,
-    OTHER = 3,
+    Unknown = 0,
+    Content = 1,
+    Size = 2,
+    Other = 3,
 }
 
 impl From<DataChange> for DataType {
     fn from(kind: DataChange) -> Self {
         match kind {
-            DataChange::Content => Self::CONTENT,
-            DataChange::Size => Self::SIZE,
-            DataChange::Other => Self::OTHER,
-            DataChange::Any => Self::UNKNOWN,
+            DataChange::Content => Self::Content,
+            DataChange::Size => Self::Size,
+            DataChange::Other => Self::Other,
+            DataChange::Any => Self::Unknown,
         }
     }
 }

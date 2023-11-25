@@ -8,11 +8,13 @@ use pyo3::exceptions::PyKeyboardInterrupt;
 use pyo3::prelude::*;
 use std::time::Duration;
 
-use crate::events::access::{AccessEvent, AccessType, AccessMode};
+use crate::events::access::{AccessEvent, AccessMode, AccessType};
 use crate::events::base::ObjectType;
 use crate::events::create::CreateEvent;
 use crate::events::delete::DeleteEvent;
-use crate::events::modify::{DataType, MetadataType, ModifyUnknownEvent, ModifyDataEvent, ModifyMetadataEvent, ModifyOtherEvent};
+use crate::events::modify::{
+    DataType, MetadataType, ModifyDataEvent, ModifyMetadataEvent, ModifyOtherEvent, ModifyUnknownEvent,
+};
 use crate::events::rename::RenameEvent;
 
 #[pyclass]

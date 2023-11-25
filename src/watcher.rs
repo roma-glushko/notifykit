@@ -18,7 +18,7 @@ use pyo3::prelude::*;
 use crate::events::access::from_access_kind;
 use crate::events::create::from_create_kind;
 use crate::events::delete::from_delete_kind;
-use crate::events::modify::{from_data_kind, from_metadata_kind, ModifyUnknownEvent, ModifyOtherEvent};
+use crate::events::modify::{from_data_kind, from_metadata_kind, ModifyOtherEvent, ModifyUnknownEvent};
 use crate::events::rename::from_rename_mode;
 use crate::events::EventType;
 
