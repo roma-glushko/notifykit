@@ -1,3 +1,4 @@
+import asyncio
 from os import PathLike
 from typing import Sequence, Protocol, Optional, Any
 from notifykit._notifykit_lib import (
@@ -78,6 +79,14 @@ class Notifier:
 
     def __next__(self) -> Events:
         event = self._watcher.get()
+
+        if event is None:
+            raise StopIteration
+
+        return event
+
+    async def __anext__(self) -> Events:
+        event = await asyncio.to_thread(self._watcher.get)
 
         if event is None:
             raise StopIteration
