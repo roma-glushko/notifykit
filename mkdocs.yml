@@ -1,0 +1,35 @@
+site_name: notifykit
+
+repo_url: https://github.com/roma-glushko/notifykit
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+    logo: fontawesome/solid/eye
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      primary: black
+      accent: light green
+      scheme: default
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      primary: black
+      accent: light green
+      scheme: slate
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to light mode
+
+  features:
+    - navigation.sections
+
+copyright: Copyright &copy; 2023 - Present, Roman Hlushko
+
+extra:
+  generator: false

@@ -17,7 +17,10 @@ dependencies = [
 
 requires-python = '>=3.8'
 readme = "README.md"
-license = {text = "MIT"}
+license = {text = "Apache 2.0"}
+
+[project.urls]
+Homepage = 'https://github.com/roma-glushko/notifykit'
 
 [build-system]
 requires = ['maturin>=0.14.16,<2']
@@ -32,6 +35,8 @@ dev = [
     "pytest>=7.4.3",
     "mypy>=1.4.1",
     "ruff>=0.1.5",
+    "mkdocs-material[imaging]>=9.4.8",
+    "mkdocs>=1.5.3",
 ]
 
 [tool.ruff]
