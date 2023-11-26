@@ -39,10 +39,10 @@ lint-fix: ## Lint all source code
 	@pdm run mypy --pretty $(SOURCE)
 
 docs-serve: ## Run documentation locally
-	@mkdocs serve -a localhost:7756
+	@pdm run mkdocs serve -a localhost:7756
 
 docs-build: ## Make a publishable version of documentation
-	@mkdocs build
+	@pdm run mkdocs build
 
 .PHONY: clean
 clean:  # Clean all cache dirs
