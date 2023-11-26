@@ -33,6 +33,32 @@ PyPY 3.8-3.10 on the following platforms:
 - **Linux**: x86_64 & aarch64
 - **MacOS**: x86_64
 
+## Usage
+
+```python
+import asyncio
+import os
+from pathlib import Path
+
+from notifykit import Notifier
+
+
+async def watch(watched_dir: Path) -> None:
+    with Notifier(debounce_ms=200, debug=True) as notifier:
+        notifier.watch([watched_dir])
+
+        async for event in notifier:
+            # process your events
+            print(event)
+
+
+if __name__ == "__main__":
+    watched_dir = Path("./watched_dir")
+    os.makedirs(watched_dir, exist_ok=True)
+
+    asyncio.run(watch(watched_dir))
+```
+
 ## Features
 
 - Simple Modern Pythonic API, both sync and async
