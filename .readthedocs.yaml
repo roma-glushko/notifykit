@@ -8,8 +8,7 @@ build:
     python: "3.11"
   jobs:
     post_install:
-      - pip install pdm==2.10.4
-      - pdm install --group dev
+      - pip install pdm==2.10.4 "mkdocs-material[imaging]>=9.4.8"
 
 mkdocs:
   configuration: mkdocs.yml
