@@ -1,27 +1,82 @@
 from enum import IntEnum
-from types import TracebackType
-from typing import List, Optional
+from pathlib import Path
+from typing import List, Optional, Any
 
 """
 The lib version
 """
 __version__: str
 
-class EventTypeAttributes(IntEnum):
-    CREATED = 0b000000
-
 class WatcherError(Exception):
     """Watcher Runtime Error"""
 
-class Event:
-    """
-    """
-    event_type: int
-    detected_at_ns: int
-    path: str
+# Main Event Groups
 
-    def __init__(self, event_type: int, detected_at_ns: int, path: str) -> None:
-        ...
+class ObjectType(IntEnum):
+    UNKNOWN = 0
+    FILE = 1
+    DIR = 2
+    OTHER = 3
+
+class AccessType(IntEnum):
+    UNKNOWN = 0
+    READ = 1
+    OPEN = 2
+    CLOSE = 3
+    OTHER = 4
+
+class AccessMode(IntEnum):
+    UNKNOWN = 0
+    READ = 1
+    WRITE = 2
+    EXECUTE = 3
+    OTHER = 4
+
+class DataType(IntEnum):
+    UNKNOWN = 0
+    CONTENT = 1
+    SIZE = 2
+    OTHER = 3
+
+class MetadataType(IntEnum):
+    UNKNOWN = 0
+    ACCESS_TIME = 1
+    WRITE_TIME = 2
+    OWNERSHIP = 3
+    PERMISSIONS = 4
+    EXTENDED = 5
+    OTHER = 6
+
+class AccessEvent:
+    path: Path
+    access_type: AccessType
+    access_mode: Optional[AccessMode]
+
+class CreateEvent:
+    path: Path
+    file_type: ObjectType
+
+class ModifyDataEvent:
+    path: Path
+    data_type: DataType
+
+class ModifyMetadataEvent:
+    path: Path
+    metadata_type: MetadataType
+
+class ModifyOtherEvent:
+    path: Path
+
+class ModifyUnknownEvent:
+    path: Path
+
+class DeleteEvent:
+    path: Path
+    file_type: ObjectType
+
+class RenameEvent:
+    old_path: Path
+    new_path: Path
 
 class WatcherWrapper:
     """
@@ -32,214 +87,13 @@ class WatcherWrapper:
 
     def __init__(
         self,
+        debounce_ms: int,
         debug: bool = False,
-        force_polling: bool = False,
-        poll_delay_ms: int = 50,
-    ) -> None:
-        """
-
-        """
-        ...
-
-    def watch(self, paths: List[str], recursive: bool = True, ignore_permission_errors: bool = False) -> None:
-        """
-
-        """
-        ...
-
-    def unwatch(self, paths: List[str]) -> None:
-        """
-        """
-        ...
-
-    def get(self) -> Optional[RawEvent]:
-        ...
-
-    def close(self) -> None:
-        """
-        """
-        ...
-
-    def start(self) -> None:
-        ...
-
-    def stop(self) -> None:
-        ...
-
-# Main Event Groups
-
-class EventType(IntEnum):
-    CREATE = 0
-    ACCESS = 1
-    REMOVE = 2
-    MODIFY = 3
-    OTHER = 4
-
-class ObjectType(IntEnum):
-    FILE = 0
-    DIR = 1
-    OTHER = 3
-
-class RawEvent:
-    event_type: Optional[EventType]
-    object_type: Optional[ObjectType]
-
-    detected_at_ns: int
-    path: str
-
-class AccessEvent(Event):
-    """
-    """
-
-class CreateEvent(Event):
-    """
-    """
-
-    def is_file(self) -> bool:
-        ...
-
-    def is_dir(self) -> bool:
-        ...
-
-    def is_other(self) -> bool:
-        ...
-
-class RemoveEvent(Event):
-    """
-    """
-
-    def is_file(self) -> bool:
-        ...
-
-    def is_dir(self) -> bool:
-        ...
-
-    def is_other(self) -> bool:
-        ...
-
-class ModifyEvent(Event):
-    """
-    """
-
-class OtherEvent(Event):
-    """
-    An event not fitting in any of the above four categories.
-
-    This may be used for meta-events about the watch itself
-    """
-
-# Access Events
-class ReadEvent(AccessEvent):
-    """
-    """
-
-class OpenEvent(AccessEvent):
-    """
-    """
-
-class CloseEvent(AccessEvent):
-    """
-    """
-
-# Create Events
-
-class FileCreatedEvent(CreateEvent):
-    """
-    """
-
-class DirCreatedEvent(CreateEvent):
-    """
-    """
-
-class OtherCreatedEvent(CreateEvent):
-    """
-    """
-
-# Remove Events
-
-class FileRemovedEvent(RemoveEvent):
-    """
-    """
-
-class DirRemovedEvent(RemoveEvent):
-    """
-    """
-
-class OtherRemovedEvent(RemoveEvent):
-    """
-    """
-
-# Modify Events
-
-class DataChangedEvent(ModifyEvent):
-    """
-    """
-
-class MetadataModifiedEvent(ModifyEvent):
-    """
-    """
-
-class RenameEvent(ModifyEvent):
-    """
-    """
-
-
-# Data Modified Events
-
-class ContentChangedEvent(DataChangedEvent):
-    """
-    """
-
-class SizeChangedEvent(DataChangedEvent):
-    """
-    """
-
-class OtherDataChangedEvent(DataChangedEvent):
-    """
-    """
-
-# Metadata Modified Events
-
-class OwnershipModifiedEvent(MetadataModifiedEvent):
-    """
-    An event emitted when the ownership of the file or folder is changed
-    """
-
-class PermissionsModifiedEvent(MetadataModifiedEvent):
-    """
-    """
-
-class WriteTimeModifiedEvent(MetadataModifiedEvent):
-    """
-    An event emitted when write or modify time of the file or folder is changed
-    """
-
-class AccessTimeModifiedEvent(MetadataModifiedEvent):
-    """
-    """
-
-class ExtendedAttributeModifiedEvent(MetadataModifiedEvent):
-    """
-    """
-
-class OtherAttributeModifiedEvent(MetadataModifiedEvent):
-    """
-    """
-
-# Name Modified Events
-
-class RenamedToEvent(RenameEvent):
-    """
-    """
-
-class RenamedFromEvent(RenameEvent):
-    """
-    """
-
-class RenamedBothEvent(RenameEvent):
-    """
-    """
-
-class RenamedOtherEvent(RenameEvent):
-    """
-    """
+        debounce_tick_rate_ms: Optional[int] = None,
+    ) -> None: ...
+    def watch(self, paths: List[str], recursive: bool = True, ignore_permission_errors: bool = False) -> None: ...
+    def unwatch(self, paths: List[str]) -> None: ...
+    def get(self) -> Optional[Any]: ...
+    def close(self) -> None: ...
+    def start(self) -> None: ...
+    def stop(self) -> None: ...

@@ -5,7 +5,7 @@ from notifykit import Notifier
 
 
 def watch(watched_dir: Path) -> None:
-    with Notifier() as notifier:
+    with Notifier(debounce_ms=200, debug=True) as notifier:
         notifier.watch([watched_dir])
 
         for event in notifier:
