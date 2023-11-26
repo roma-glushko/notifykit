@@ -1,6 +1,6 @@
 [package]
 name = "notifykit_lib"
-version = "0.0.1-alpha.1"
+version = "0.0.1"
 edition = "2021"
 license = "A toolkit for building applications watching filesystem changes"
 homepage = "https://github.com/roma-glushko/notifykit"
@@ -12,7 +12,7 @@ crossbeam-channel = "0.5.4"
 crossbeam-utils = "0.8.16"
 notify-debouncer-full = "0.3.1"
 notify = { version = "6.1.1"}
-pyo3 = {version = "0.19.2", features = ["extension-module", "abi3-py38"]}
+pyo3 = {version = "0.20.0", features = ["extension-module", "abi3-py38"]}
 
 [lib]
 name = "_notifykit_lib"

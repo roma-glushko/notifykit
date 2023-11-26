@@ -8,10 +8,13 @@ use pyo3::exceptions::PyKeyboardInterrupt;
 use pyo3::prelude::*;
 use std::time::Duration;
 
-use crate::events::access::AccessEvent;
+use crate::events::access::{AccessEvent, AccessMode, AccessType};
+use crate::events::base::ObjectType;
 use crate::events::create::CreateEvent;
 use crate::events::delete::DeleteEvent;
-use crate::events::modify::{ModifyAnyEvent, ModifyDataEvent, ModifyMetadataEvent, ModifyOtherEvent};
+use crate::events::modify::{
+    DataType, MetadataType, ModifyDataEvent, ModifyMetadataEvent, ModifyOtherEvent, ModifyUnknownEvent,
+};
 use crate::events::rename::RenameEvent;
 
 #[pyclass]
@@ -87,15 +90,27 @@ fn _notifykit_lib(py: Python, m: &PyModule) -> PyResult<()> {
 
     m.add_class::<WatcherWrapper>()?;
 
-    // Event Data Classes
-    m.add_class::<AccessEvent>()?;
+    // Create & Delete Events
+    m.add_class::<ObjectType>()?;
     m.add_class::<CreateEvent>()?;
     m.add_class::<DeleteEvent>()?;
-    m.add_class::<RenameEvent>()?;
+
+    // Access Event
+    m.add_class::<AccessType>()?;
+    m.add_class::<AccessMode>()?;
+    m.add_class::<AccessEvent>()?;
+
+    // Modify Event
+    m.add_class::<MetadataType>()?;
+    m.add_class::<DataType>()?;
+
     m.add_class::<ModifyMetadataEvent>()?;
     m.add_class::<ModifyDataEvent>()?;
     m.add_class::<ModifyOtherEvent>()?;
-    m.add_class::<ModifyAnyEvent>()?;
+    m.add_class::<ModifyUnknownEvent>()?;
+
+    // Raname
+    m.add_class::<RenameEvent>()?;
 
     Ok(())
 }

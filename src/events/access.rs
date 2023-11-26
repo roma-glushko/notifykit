@@ -3,10 +3,10 @@ use pyo3::prelude::*;
 use std::convert::From;
 use std::path::PathBuf;
 
-#[pyclass]
+#[pyclass(rename_all = "SCREAMING_SNAKE_CASE")]
 #[derive(Debug, Copy, Clone)]
 pub enum AccessType {
-    Any = 0,
+    Unknown = 0,
     Read = 1,
     Open = 2,
     Close = 3,
@@ -20,15 +20,15 @@ impl From<AccessKind> for AccessType {
             AccessKind::Open(_) => AccessType::Open,
             AccessKind::Close(_) => AccessType::Close,
             AccessKind::Other => AccessType::Other,
-            AccessKind::Any => AccessType::Any,
+            AccessKind::Any => AccessType::Unknown,
         }
     }
 }
 
-#[pyclass]
+#[pyclass(rename_all = "SCREAMING_SNAKE_CASE")]
 #[derive(Debug, Copy, Clone)]
 pub enum AccessMode {
-    Any = 0,
+    Unknown = 0,
     Read = 1,
     Write = 2,
     Execute = 3,
@@ -42,21 +42,9 @@ impl From<NotifyAccessMode> for AccessMode {
             NotifyAccessMode::Write => AccessMode::Write,
             NotifyAccessMode::Execute => AccessMode::Execute,
             NotifyAccessMode::Other => AccessMode::Other,
-            NotifyAccessMode::Any => AccessMode::Any,
+            NotifyAccessMode::Any => AccessMode::Unknown,
         }
     }
-}
-
-#[pyclass]
-#[derive(Debug, Copy, Clone)]
-pub enum MetadataType {
-    AccessTime = 0,
-    WriteTime = 1,
-    Ownership = 2,
-    Permissions = 3,
-    Extended = 4,
-    Other = 5,
-    Any = 6,
 }
 
 #[pyclass]

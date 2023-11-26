@@ -13,37 +13,39 @@ class WatcherError(Exception):
 # Main Event Groups
 
 class ObjectType(IntEnum):
-    FILE = 0
-    DIR = 1
+    UNKNOWN = 0
+    FILE = 1
+    DIR = 2
     OTHER = 3
 
 class AccessType(IntEnum):
-    Read = 1
-    Open = 2
-    Close = 3
-    Other = 4
+    UNKNOWN = 0
+    READ = 1
+    OPEN = 2
+    CLOSE = 3
+    OTHER = 4
 
 class AccessMode(IntEnum):
-    Any = 0
-    Read = 1
-    Write = 2
-    Execute = 3
-    Other = 4
+    UNKNOWN = 0
+    READ = 1
+    WRITE = 2
+    EXECUTE = 3
+    OTHER = 4
 
 class DataType(IntEnum):
-    Any = 0
-    Content = 1
-    Size = 2
-    Other = 3
+    UNKNOWN = 0
+    CONTENT = 1
+    SIZE = 2
+    OTHER = 3
 
 class MetadataType(IntEnum):
-    AccessTime = 0
-    WriteTime = 1
-    Ownership = 2
-    Permissions = 3
-    Extended = 4
-    Other = 5
-    Any = 6
+    UNKNOWN = 0
+    ACCESS_TIME = 1
+    WRITE_TIME = 2
+    OWNERSHIP = 3
+    PERMISSIONS = 4
+    EXTENDED = 5
+    OTHER = 6
 
 class AccessEvent:
     path: Path
@@ -63,6 +65,9 @@ class ModifyMetadataEvent:
     metadata_type: MetadataType
 
 class ModifyOtherEvent:
+    path: Path
+
+class ModifyUnknownEvent:
     path: Path
 
 class DeleteEvent:

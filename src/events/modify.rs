@@ -2,16 +2,16 @@ use notify::event::{DataChange, MetadataKind};
 use pyo3::prelude::*;
 use std::path::PathBuf;
 
-#[pyclass]
+#[pyclass(rename_all = "SCREAMING_SNAKE_CASE")]
 #[derive(Debug, Clone)]
 pub enum MetadataType {
-    AccessTime = 0,
-    WriteTime = 1,
-    Ownership = 2,
-    Permissions = 3,
-    Extended = 4,
-    Other = 5,
-    Any = 6,
+    Unknown = 0,
+    AccessTime = 1,
+    WriteTime = 2,
+    Ownership = 3,
+    Permissions = 4,
+    Extended = 5,
+    Other = 6,
 }
 
 impl From<MetadataKind> for MetadataType {
@@ -23,15 +23,15 @@ impl From<MetadataKind> for MetadataType {
             MetadataKind::Permissions => Self::Permissions,
             MetadataKind::Extended => Self::Extended,
             MetadataKind::Other => Self::Other,
-            MetadataKind::Any => Self::Any,
+            MetadataKind::Any => Self::Unknown,
         }
     }
 }
 
-#[pyclass]
+#[pyclass(rename_all = "SCREAMING_SNAKE_CASE")]
 #[derive(Debug, Clone)]
 pub enum DataType {
-    Any = 0,
+    Unknown = 0,
     Content = 1,
     Size = 2,
     Other = 3,
@@ -43,7 +43,7 @@ impl From<DataChange> for DataType {
             DataChange::Content => Self::Content,
             DataChange::Size => Self::Size,
             DataChange::Other => Self::Other,
-            DataChange::Any => Self::Any,
+            DataChange::Any => Self::Unknown,
         }
     }
 }
@@ -133,13 +133,13 @@ impl ModifyOtherEvent {
 
 #[pyclass]
 #[derive(Debug, Clone)]
-pub struct ModifyAnyEvent {
+pub struct ModifyUnknownEvent {
     #[pyo3(get)]
     pub path: PathBuf,
 }
 
 #[pymethods]
-impl ModifyAnyEvent {
+impl ModifyUnknownEvent {
     #[new]
     pub fn new(path: PathBuf) -> Self {
         Self { path }

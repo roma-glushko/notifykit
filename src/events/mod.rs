@@ -14,7 +14,7 @@ pub enum EventType {
     Delete(delete::DeleteEvent),
     ModifyMetadata(modify::ModifyMetadataEvent),
     ModifyData(modify::ModifyDataEvent),
-    ModifyAny(modify::ModifyAnyEvent),
+    ModifyUnknown(modify::ModifyUnknownEvent),
     ModifyOther(modify::ModifyOtherEvent),
     Rename(rename::RenameEvent),
 }
@@ -28,7 +28,7 @@ impl ToPyObject for EventType {
             EventType::ModifyMetadata(event) => event.clone().into_py(py),
             EventType::ModifyData(event) => event.clone().into_py(py),
             EventType::ModifyOther(event) => event.clone().into_py(py),
-            EventType::ModifyAny(event) => event.clone().into_py(py),
+            EventType::ModifyUnknown(event) => event.clone().into_py(py),
             EventType::Rename(event) => event.clone().into_py(py),
         }
     }
