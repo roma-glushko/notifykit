@@ -13,6 +13,8 @@ crossbeam-utils = "0.8.16"
 notify-debouncer-full = "0.3.1"
 notify = { version = "6.1.1"}
 pyo3 = {version = "0.20.0", features = ["extension-module", "abi3-py38"]}
+file-id = "0.2.1"
+walkdir = "2.4.0"
 
 [lib]
 name = "_notifykit_lib"

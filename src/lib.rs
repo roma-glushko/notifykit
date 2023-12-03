@@ -1,5 +1,8 @@
 mod events;
 mod watcher;
+mod processor;
+mod file_cache;
+
 extern crate notify;
 extern crate pyo3;
 

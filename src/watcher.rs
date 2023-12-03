@@ -4,14 +4,14 @@ extern crate pyo3;
 use std::io::ErrorKind as IOErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use crossbeam_channel::{unbounded, Receiver, RecvTimeoutError, Sender};
+use crossbeam_channel::{Receiver, RecvTimeoutError, Sender};
 use notify::event::ModifyKind;
-use notify::{ErrorKind as NotifyErrorKind, EventKind, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher};
-use notify_debouncer_full::{new_debouncer, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap};
+use notify::{Error, ErrorKind as NotifyErrorKind, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher};
+use notify_debouncer_full::{DebounceEventResult, DebouncedEvent, FileIdMap};
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyOSError, PyPermissionError};
 use pyo3::prelude::*;
 
@@ -21,6 +21,7 @@ use crate::events::delete::from_delete_kind;
 use crate::events::modify::{from_data_kind, from_metadata_kind, ModifyOtherEvent, ModifyUnknownEvent};
 use crate::events::rename::from_rename_mode;
 use crate::events::EventType;
+use crate::processor::EventProcessor;
 
 pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
 
@@ -31,40 +32,42 @@ type NotificationReceiver = Receiver<DebounceEventResult>;
 #[derive(Debug)]
 pub(crate) struct Watcher {
     debug: bool,
-    notification_receiver: NotificationReceiver,
-    event_receiver: EventReceiver,
-    event_sender: EventSender,
-    debouncer: Debouncer<RecommendedWatcher, FileIdMap>,
+    watcher: RecommendedWatcher,
+    file_cache: FileIdMap,
+    processor: Arc<Mutex<EventProcessor<FileIdMap>>>,
     listen_thread: Option<JoinHandle<()>>,
     stop_listening: Arc<AtomicBool>,
 }
 
 impl Watcher {
-    pub fn new(debounce_ms: u64, debounce_tick_rate_ms: Option<u64>, debug: bool) -> PyResult<Self> {
-        let (notification_sender, notification_receiver) = unbounded();
+    pub fn new(buffering_time_ms: u64, debug: bool) -> PyResult<Self> {
+        let file_cache =  FileIdMap::new();
+        let file_cache_c = file_cache.clone();
 
-        // The logic that debouncer incorporates is the heart of notifykit,
-        // so it's possible we may need to take under the umbrella of
-        // the project to further improve if needed
-        let result = new_debouncer(
-            Duration::from_millis(debounce_ms),
-            debounce_tick_rate_ms.map(Duration::from_millis),
-            notification_sender,
-        ); // TODO: handle this error
+        let processor = Arc::new(Mutex::new(EventProcessor::new(
+            file_cache,
+            Duration::from_millis(buffering_time_ms)
+        )));
 
-        let debouncer = match result {
-            Ok(debouncer) => debouncer,
-            Err(e) => return Err(WatcherError::new_err(format!("Error creating poll watcher: {}", e))),
-        };
+        let processor_c = processor.clone();
 
-        let (event_sender, event_receiver) = unbounded::<EventType>();
+        let watcher = RecommendedWatcher::new(
+            move |e: Result<Event, Error>| {
+                let mut event_processor = processor_c.lock();
+
+                match e {
+                    Ok(e) => event_processor.add_event(e),
+                    Err(e) => event_processor.add_error(e),
+                }
+            },
+            notify::Config::default(),
+        )?;
 
         Ok(Watcher {
             debug,
-            notification_receiver,
-            event_receiver,
-            event_sender,
-            debouncer,
+            watcher,
+            file_cache: file_cache_c,
+            processor,
             listen_thread: None,
             stop_listening: Arc::new(AtomicBool::new(false)),
         })
@@ -87,7 +90,7 @@ impl Watcher {
                 )));
             }
 
-            let result = self.debouncer.watcher().watch(path, mode);
+            let result = self.watcher.watch(path, mode);
 
             if let Err(err) = result {
                 if !ignore_permission_errors {
@@ -95,11 +98,11 @@ impl Watcher {
                 }
             }
 
-            self.debouncer.cache().add_root(path, mode);
+            self.file_cache.add_root(path, mode);
         }
 
         if self.debug {
-            eprintln!("watcher: {:?}", self.debouncer.watcher());
+            eprintln!("watcher: {:?}", self.watcher);
         }
 
         Ok(())
@@ -109,17 +112,17 @@ impl Watcher {
         for path_str in paths.into_iter() {
             let path = Path::new(&path_str);
 
-            let result = self.debouncer.watcher().unwatch(path);
+            let result = self.watcher.unwatch(path);
 
             if let Err(err) = result {
                 return Err(Self::map_notify_error(err));
             }
 
-            self.debouncer.cache().remove_root(path);
+            self.file_cache.remove_root(path);
         }
 
         if self.debug {
-            eprintln!("watcher: {:?}", self.debouncer.watcher());
+            eprintln!("watcher: {:?}", self.watcher);
         }
 
         Ok(())
@@ -162,52 +165,63 @@ impl Watcher {
         Ok(Some(self.event_receiver.recv_timeout(timeout)?))
     }
 
-    pub fn start(&mut self, tick_rate_ms: u64) {
-        let notification_receiver = self.notification_receiver.clone();
-        let event_sender = self.event_sender.clone();
+    pub fn start(&mut self, tick_rate_ms: Option<u64>) {
+        // let notification_receiver = self.notification_receiver.clone();
+        // let event_sender = self.event_sender.clone();
+        let processor_c = self.processor.clone()
         let stop_listening = self.stop_listening.clone();
         let debug = self.debug;
 
-        let listen_thread = std::thread::spawn(move || {
-            while !stop_listening.load(Ordering::Relaxed) {
-                let timeout = Duration::from_millis(tick_rate_ms);
-                let timed_out_result = &notification_receiver.recv_timeout(timeout);
+        let tick_rate = self.get_tick_rate(tick_rate_ms)?;
 
-                match timed_out_result {
-                    Ok(notification_result) => match notification_result {
-                        Ok(notifications) => {
-                            if debug {
-                                println!("{:?}", notifications);
-                            }
+        let listen_thread = std::thread::Builder::new()
+            .name("notifykit watcher loop".to_string())
+            .spawn(move || {
+            while !stop_listening.load(Ordering::Acquire) {
+                std::thread::sleep(tick_rate);
 
-                            for raw_notification in notifications {
-                                if let Some(event) = Self::create_event(raw_notification) {
-                                    event_sender.send(event).unwrap();
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!("error: {:?}", e);
-                        }
-                    },
-                    Err(e) => match e {
-                        RecvTimeoutError::Timeout => (),
-                        RecvTimeoutError::Disconnected => {
-                            eprintln!("error: {:?}", e);
-                        }
-                    },
-                };
+                let raw_events;
+                let errors;
+
+                {
+                    let mut processor = processor_c.lock();
+
+                    raw_events = processor.debounced_events();
+                    errors = processor.errors();
+                }
+
+                if debug {
+                    println!("{:?}", notifications);
+                }
+
+                for raw_notification in notifications {
+                    if let Some(event) = Self::create_event(raw_notification) {
+                        event_sender.send(event)?;
+                    }
+                }
+
+                if !raw_events.is_empty() {
+                    event_handler.handle_event(Ok(send_data));
+                }
+
+                if !errors.is_empty() {
+                    event_handler.handle_event(Err(errors));
+                }
             }
-        });
+        })?;
 
         self.listen_thread = Some(listen_thread)
+    }
+
+    pub fn set_stop(&mut self) {
+        self.stop_listening.store(true, Ordering::Relaxed);
     }
 
     pub fn stop(&mut self) {
         if let Some(listen_thread) = self.listen_thread.take() {
             // self.debouncer.stop();
 
-            self.stop_listening.store(true, Ordering::Relaxed);
+            self.set_stop();
 
             listen_thread.join().unwrap();
             self.listen_thread = None;
@@ -215,7 +229,7 @@ impl Watcher {
     }
 
     pub fn repr(&mut self) -> String {
-        format!("Watcher({:#?})", self.debouncer.watcher())
+        format!("Watcher({:#?})", self.watcher)
     }
 
     fn map_notify_error(notify_error: notify::Error) -> PyErr {
@@ -238,5 +252,34 @@ impl Watcher {
         };
 
         PyOSError::new_err(format!("{} ({:?})", err_str, notify_error))
+    }
+
+    fn get_tick_rate(tick_rate_ms: Option<u64>) -> {
+        let tick_div = 5;
+
+        let tick = match tick_rate {
+            Some(v) => {
+                if v > timeout {
+                    return Err(Error::new(ErrorKind::Generic(format!(
+                        "Invalid tick_rate, tick rate {:?} > {:?} timeout!",
+                        v, timeout
+                    ))));
+                }
+                v
+            }
+            None => timeout.checked_div(tick_div).ok_or_else(|| {
+                Error::new(ErrorKind::Generic(format!(
+                    "Failed to calculate tick as {:?}/{}!",
+                    timeout, tick_div
+                )))
+            })?,
+        };
+
+    }
+}
+
+impl Drop for Watcher {
+    fn drop(&mut self) {
+        self.set_stop();
     }
 }
