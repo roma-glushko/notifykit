@@ -1,6 +1,6 @@
 [project]
 name = "notifykit"
-version = "0.0.2"
+version = "0.0.3"
 description = "A modern efficient Python toolkit for building applications that need to watch filesystem changes"
 authors = [
     {name = "Roman Glushko", email = "roman.glushko.m@gmail.com"},
