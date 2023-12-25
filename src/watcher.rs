@@ -94,7 +94,7 @@ impl Watcher {
         }
 
         if self.debug {
-            eprintln!("watcher: {:?}", self.watcher);
+            println!("watcher: {:?}", self.watcher);
         }
 
         Ok(())
@@ -114,7 +114,7 @@ impl Watcher {
         }
 
         if self.debug {
-            eprintln!("watcher: {:?}", self.watcher);
+            println!("watcher: {:?}", self.watcher);
         }
 
         Ok(())
@@ -155,6 +155,7 @@ impl Watcher {
 
         {
             let mut processor = self.processor.lock().unwrap();
+
             raw_events = processor.get_events();
             errors = processor.get_errors();
         }
@@ -164,7 +165,7 @@ impl Watcher {
         }
 
         if !errors.is_empty() {
-            println!("errors: {:?}", errors);
+            eprintln!("errors: {:?}", errors);
         }
 
         let mut events: Vec<EventType> = Vec::with_capacity(raw_events.len());

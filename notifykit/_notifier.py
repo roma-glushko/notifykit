@@ -65,12 +65,12 @@ class Notifier:
         return self
 
     def __next__(self) -> List[Event]:
-        event = self._watcher.get()
+        events = self._watcher.get()
 
-        if event is None:
+        if events is None:
             raise StopIteration
 
-        return event
+        return events
 
     async def __anext__(self) -> List[Event]:
         events = await asyncio.to_thread(self._watcher.get)

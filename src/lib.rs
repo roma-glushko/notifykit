@@ -7,7 +7,6 @@ extern crate notify;
 extern crate pyo3;
 
 use crate::watcher::{Watcher, WatcherError};
-use pyo3::exceptions::PyKeyboardInterrupt;
 use pyo3::prelude::*;
 use std::time::Duration;
 
@@ -36,14 +35,8 @@ impl WatcherWrapper {
 
     pub fn get(&self, py: Python) -> PyResult<Vec<PyObject>> {
         loop {
-            std::thread::sleep(Duration::from_millis(200)); // TODO: parametrize
-
-            match py.check_signals() {
-                Ok(_) => (),
-                Err(_) => {
-                    return Err(PyKeyboardInterrupt::new_err("KeyboardInterrupt"));
-                }
-            };
+            py.allow_threads(|| std::thread::sleep(Duration::from_millis(200)));  // TODO: parametrize
+            py.check_signals()?;
 
             let events = self.watcher.get();
 

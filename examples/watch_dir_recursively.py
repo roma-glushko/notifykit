@@ -5,11 +5,12 @@ from notifykit import Notifier
 
 
 def watch(watched_dir: Path) -> None:
-    with Notifier(debounce_ms=200, debug=True) as notifier:
-        notifier.watch([watched_dir])
+    notifier = Notifier(debounce_ms=200, debug=True)
 
-        for event in notifier:
-            print(event)
+    notifier.watch([watched_dir])
+
+    for events in notifier:
+        print(events)
 
 
 if __name__ == "__main__":
