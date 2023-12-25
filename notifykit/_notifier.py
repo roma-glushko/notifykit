@@ -19,10 +19,13 @@ class AnyEvent(Protocol):
     def is_set(self) -> bool:
         ...
 
+    def set(self) -> None:
+        ...
+
 
 class NotifierT(Protocol):
     def watch(
-            self, paths: Sequence[PathLike[str]], recursive: bool = True, ignore_permission_errors: bool = False
+        self, paths: Sequence[PathLike[str]], recursive: bool = True, ignore_permission_errors: bool = False
     ) -> None:
         ...
 
@@ -47,7 +50,9 @@ class Notifier:
     Notifier collects filesystem events from the underlying watcher and expose them via sync/async API
     """
 
-    def __init__(self, debounce_ms: int = 200, tick_ms: int = 50, debug: bool = False, stop_event: Optional[AnyEvent] = None) -> None:
+    def __init__(
+        self, debounce_ms: int = 200, tick_ms: int = 50, debug: bool = False, stop_event: Optional[AnyEvent] = None
+    ) -> None:
         self._debounce_ms = debounce_ms
         self._tick_ms = tick_ms
         self._debug = debug
@@ -56,7 +61,10 @@ class Notifier:
         self._stop_event = stop_event if stop_event else anyio.Event()
 
     def watch(
-            self, paths: Sequence[PathLike[str]], recursive: bool = True, ignore_permission_errors: bool = False,
+        self,
+        paths: Sequence[PathLike[str]],
+        recursive: bool = True,
+        ignore_permission_errors: bool = False,
     ) -> None:
         self._watcher.watch([str(path) for path in paths], recursive, ignore_permission_errors)
 
