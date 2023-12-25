@@ -1,7 +1,7 @@
 mod events;
-mod watcher;
-mod processor;
 mod file_cache;
+mod processor;
+mod watcher;
 
 extern crate notify;
 extern crate pyo3;
@@ -28,45 +28,31 @@ pub struct WatcherWrapper {
 #[pymethods]
 impl WatcherWrapper {
     #[new]
-    fn __init__(debounce_ms: u64, debug: bool, debounce_tick_rate_ms: Option<u64>) -> PyResult<Self> {
-        let watcher = Watcher::new(debounce_ms, debounce_tick_rate_ms, debug);
+    fn __init__(debounce_ms: u64, debug: bool) -> PyResult<Self> {
+        let watcher = Watcher::new(debounce_ms, debug);
 
         Ok(WatcherWrapper { watcher: watcher? })
     }
 
-    pub fn get(&self, py: Python) -> PyResult<Option<PyObject>> {
-        loop {
-            match py.check_signals() {
-                Ok(_) => (),
-                Err(_) => {
-                    return Err(PyKeyboardInterrupt::new_err("KeyboardInterrupt"));
-                }
-            };
+    pub fn get(&self, py: Python) -> PyResult<Vec<PyObject>> {
+        std::thread::sleep(Duration::from_millis(200)); // TODO: parametrize
 
-            let result = self.watcher.get(Duration::from_millis(200));
-
-            match result {
-                Ok(event_or_none) => {
-                    return match event_or_none {
-                        Some(event) => Ok(Some(event.to_object(py))),
-                        None => Ok(None),
-                    }
-                }
-                Err(_) => continue,
+        match py.check_signals() {
+            Ok(_) => (),
+            Err(_) => {
+                return Err(PyKeyboardInterrupt::new_err("KeyboardInterrupt"));
             }
+        };
+
+        let events = self.watcher.get();
+
+        let mut py_events = Vec::with_capacity(events.len());
+
+        for event in events.iter() {
+            py_events.push(event.to_object(py))
         }
-    }
 
-    pub fn start(&mut self, py: Python) -> PyResult<()> {
-        py.allow_threads(|| self.watcher.start(400));
-
-        Ok(())
-    }
-
-    pub fn stop(&mut self) -> PyResult<()> {
-        self.watcher.stop();
-
-        Ok(())
+        Ok(py_events)
     }
 
     pub fn watch(&mut self, paths: Vec<String>, recursive: bool, ignore_permission_errors: bool) -> PyResult<()> {

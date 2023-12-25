@@ -1,15 +1,15 @@
 use std::collections::{HashMap, VecDeque};
-use std::ops::{Deref};
+use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 use std::time::Duration;
 
 #[cfg(not(test))]
 use std::time::Instant;
 
-use notify::{Error as NotifyError, Event as NotifyEvent, EventKind};
-use crate::file_cache::{FileCache, FileIdCache};
+use crate::file_cache::FileIdCache;
 use file_id::FileId;
 use notify::event::{ModifyKind, RemoveKind, RenameMode};
+use notify::{Error as NotifyError, Event as NotifyEvent, EventKind};
 
 /// A debounced event is emitted after a short delay.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,6 +32,12 @@ impl Deref for RawEvent {
 
     fn deref(&self) -> &Self::Target {
         &self.event
+    }
+}
+
+impl DerefMut for RawEvent {
+    fn deref_mut(&mut self) -> &mut NotifyEvent {
+        &mut self.event
     }
 }
 
@@ -225,7 +231,7 @@ impl<T: FileIdCache> EventProcessor<T> {
                 // ignore meta events
             }
             _ => {
-                if self.file_cache.cached_file_id(path).is_none() {
+                if self.file_cache.get_file_id(path).is_none() {
                     self.file_cache.add_path(path);
                 }
 
@@ -239,7 +245,7 @@ impl<T: FileIdCache> EventProcessor<T> {
         let path = &event.paths[0];
 
         // store event
-        let file_id = self.file_cache.cached_file_id(path).cloned();
+        let file_id = self.file_cache.get_file_id(path).cloned();
         self.rename_event = Some((RawEvent::new(event.clone(), time), file_id));
 
         self.file_cache.remove_path(path);
@@ -254,12 +260,7 @@ impl<T: FileIdCache> EventProcessor<T> {
             .rename_event
             .as_ref()
             .and_then(|(e, _)| e.tracker())
-            .and_then(|from_tracker| {
-                event
-                    .attrs
-                    .tracker()
-                    .map(|to_tracker| from_tracker == to_tracker)
-            })
+            .and_then(|from_tracker| event.attrs.tracker().map(|to_tracker| from_tracker == to_tracker))
             .unwrap_or_default();
 
         let file_ids_match = self
@@ -268,7 +269,7 @@ impl<T: FileIdCache> EventProcessor<T> {
             .and_then(|(_, id)| id.as_ref())
             .and_then(|from_file_id| {
                 self.file_cache
-                    .cached_file_id(&event.paths[0])
+                    .get_file_id(&event.paths[0])
                     .map(|to_file_id| from_file_id == to_file_id)
             })
             .unwrap_or_default();
@@ -301,10 +302,7 @@ impl<T: FileIdCache> EventProcessor<T> {
             .iter()
             .enumerate()
             .find_map(|(index, e)| {
-                if matches!(
-                    e.kind,
-                    EventKind::Modify(ModifyKind::Name(RenameMode::Both))
-                ) {
+                if matches!(e.kind, EventKind::Modify(ModifyKind::Name(RenameMode::Both))) {
                     Some((Some(index), e.paths[0].clone(), e.time))
                 } else {
                     None
@@ -320,12 +318,8 @@ impl<T: FileIdCache> EventProcessor<T> {
         if source_queue.was_removed() {
             let event = source_queue.events.pop_front().unwrap();
 
-            self.events_by_file.insert(
-                event.paths[0].clone(),
-                FileEventQueue {
-                    events: [event].into(),
-                },
-            );
+            self.events_by_file
+                .insert(event.paths[0].clone(), FileEventQueue { events: [event].into() });
         }
 
         // update paths
@@ -394,8 +388,9 @@ impl<T: FileIdCache> EventProcessor<T> {
         if let Some(queue) = self.events_by_file.get_mut(path) {
             // skip duplicate create events and modifications right after creation
             if match event.kind {
-                EventKind::Modify(ModifyKind::Data(_) | ModifyKind::Metadata(_))
-                | EventKind::Create(_) => !queue.was_created(),
+                EventKind::Modify(ModifyKind::Data(_) | ModifyKind::Metadata(_)) | EventKind::Create(_) => {
+                    !queue.was_created()
+                }
                 _ => true,
             } {
                 queue.events.push_back(RawEvent::new(event, time));
