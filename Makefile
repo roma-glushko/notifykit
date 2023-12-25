@@ -60,3 +60,8 @@ clean:  # Clean all cache dirs
 	@rm -f .coverage
 	@rm -f .coverage.*
 	@rm -rf build
+	@rm -rf dist
+	@rm -rf sdist
+	@rm -rf site
+	@rm -rf .ruff_cache
+	@rm -rf target

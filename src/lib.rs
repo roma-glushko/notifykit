@@ -35,24 +35,30 @@ impl WatcherWrapper {
     }
 
     pub fn get(&self, py: Python) -> PyResult<Vec<PyObject>> {
-        std::thread::sleep(Duration::from_millis(200)); // TODO: parametrize
+        loop {
+            std::thread::sleep(Duration::from_millis(200)); // TODO: parametrize
 
-        match py.check_signals() {
-            Ok(_) => (),
-            Err(_) => {
-                return Err(PyKeyboardInterrupt::new_err("KeyboardInterrupt"));
+            match py.check_signals() {
+                Ok(_) => (),
+                Err(_) => {
+                    return Err(PyKeyboardInterrupt::new_err("KeyboardInterrupt"));
+                }
+            };
+
+            let events = self.watcher.get();
+
+            if events.is_empty() {
+                continue;
             }
-        };
 
-        let events = self.watcher.get();
+            let mut py_events = Vec::with_capacity(events.len());
 
-        let mut py_events = Vec::with_capacity(events.len());
+            for event in events.iter() {
+                py_events.push(event.to_object(py))
+            }
 
-        for event in events.iter() {
-            py_events.push(event.to_object(py))
+            return Ok(py_events);
         }
-
-        Ok(py_events)
     }
 
     pub fn watch(&mut self, paths: Vec<String>, recursive: bool, ignore_permission_errors: bool) -> PyResult<()> {

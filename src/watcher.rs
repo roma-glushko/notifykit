@@ -159,7 +159,7 @@ impl Watcher {
             errors = processor.get_errors();
         }
 
-        if self.debug {
+        if !raw_events.is_empty() && self.debug {
             println!("raw_events: {:?}", raw_events);
         }
 
