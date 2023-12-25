@@ -3,15 +3,13 @@ extern crate pyo3;
 
 use std::io::ErrorKind as IOErrorKind;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::thread::JoinHandle;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use crossbeam_channel::{unbounded, Receiver, RecvTimeoutError, Sender};
 use notify::event::ModifyKind;
-use notify::{ErrorKind as NotifyErrorKind, EventKind, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher};
-use notify_debouncer_full::{new_debouncer, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap};
+use notify::{
+    ErrorKind as NotifyErrorKind, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
+};
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyOSError, PyPermissionError};
 use pyo3::prelude::*;
 
@@ -21,52 +19,49 @@ use crate::events::delete::from_delete_kind;
 use crate::events::modify::{from_data_kind, from_metadata_kind, ModifyOtherEvent, ModifyUnknownEvent};
 use crate::events::rename::from_rename_mode;
 use crate::events::EventType;
+use crate::file_cache::FileCache;
+use crate::processor::{EventProcessor, RawEvent};
 
 pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
-
-type EventSender = Sender<EventType>;
-type EventReceiver = Receiver<EventType>;
-type NotificationReceiver = Receiver<DebounceEventResult>;
 
 #[derive(Debug)]
 pub(crate) struct Watcher {
     debug: bool,
-    notification_receiver: NotificationReceiver,
-    event_receiver: EventReceiver,
-    event_sender: EventSender,
-    debouncer: Debouncer<RecommendedWatcher, FileIdMap>,
-    listen_thread: Option<JoinHandle<()>>,
-    stop_listening: Arc<AtomicBool>,
+    watcher: RecommendedWatcher,
+    file_cache: FileCache,
+    processor: Arc<Mutex<EventProcessor<FileCache>>>,
 }
 
 impl Watcher {
-    pub fn new(debounce_ms: u64, debounce_tick_rate_ms: Option<u64>, debug: bool) -> PyResult<Self> {
-        let (notification_sender, notification_receiver) = unbounded();
+    pub fn new(buffering_time_ms: u64, debug: bool) -> PyResult<Self> {
+        let file_cache = FileCache::new();
+        let file_cache_c = file_cache.clone();
 
-        // The logic that debouncer incorporates is the heart of notifykit,
-        // so it's possible we may need to take under the umbrella of
-        // the project to further improve if needed
-        let result = new_debouncer(
-            Duration::from_millis(debounce_ms),
-            debounce_tick_rate_ms.map(Duration::from_millis),
-            notification_sender,
-        ); // TODO: handle this error
+        let processor = Arc::new(Mutex::new(EventProcessor::new(
+            file_cache_c,
+            Duration::from_millis(buffering_time_ms),
+        )));
 
-        let debouncer = match result {
-            Ok(debouncer) => debouncer,
-            Err(e) => return Err(WatcherError::new_err(format!("Error creating poll watcher: {}", e))),
-        };
+        let processor_c = processor.clone();
 
-        let (event_sender, event_receiver) = unbounded::<EventType>();
+        let watcher = RecommendedWatcher::new(
+            move |e: Result<Event, notify::Error>| {
+                let mut event_processor = processor_c.lock().unwrap();
+
+                match e {
+                    Ok(e) => event_processor.add_event(e),
+                    Err(e) => event_processor.add_error(e),
+                }
+            },
+            notify::Config::default(),
+        )
+        .unwrap();
 
         Ok(Watcher {
             debug,
-            notification_receiver,
-            event_receiver,
-            event_sender,
-            debouncer,
-            listen_thread: None,
-            stop_listening: Arc::new(AtomicBool::new(false)),
+            watcher,
+            file_cache,
+            processor,
         })
     }
 
@@ -87,7 +82,7 @@ impl Watcher {
                 )));
             }
 
-            let result = self.debouncer.watcher().watch(path, mode);
+            let result = self.watcher.watch(path, mode);
 
             if let Err(err) = result {
                 if !ignore_permission_errors {
@@ -95,11 +90,11 @@ impl Watcher {
                 }
             }
 
-            self.debouncer.cache().add_root(path, mode);
+            self.file_cache.add_root(path, mode);
         }
 
         if self.debug {
-            eprintln!("watcher: {:?}", self.debouncer.watcher());
+            println!("watcher: {:?}", self.watcher);
         }
 
         Ok(())
@@ -109,23 +104,23 @@ impl Watcher {
         for path_str in paths.into_iter() {
             let path = Path::new(&path_str);
 
-            let result = self.debouncer.watcher().unwatch(path);
+            let result = self.watcher.unwatch(path);
 
             if let Err(err) = result {
                 return Err(Self::map_notify_error(err));
             }
 
-            self.debouncer.cache().remove_root(path);
+            self.file_cache.remove_root(path);
         }
 
         if self.debug {
-            eprintln!("watcher: {:?}", self.debouncer.watcher());
+            println!("watcher: {:?}", self.watcher);
         }
 
         Ok(())
     }
 
-    fn create_event(event: &DebouncedEvent) -> Option<EventType> {
+    fn create_event(event: &RawEvent) -> Option<EventType> {
         let paths = &event.paths;
         let file_path: PathBuf = paths.first().unwrap().to_owned();
 
@@ -154,68 +149,38 @@ impl Watcher {
         })
     }
 
-    pub fn get(&self, timeout: Duration) -> Result<Option<EventType>, RecvTimeoutError> {
-        if self.event_receiver.is_empty() && self.listen_thread.is_none() {
-            return Ok(None);
+    pub fn get(&self) -> Vec<EventType> {
+        let raw_events;
+        let errors;
+
+        {
+            let mut processor = self.processor.lock().unwrap();
+
+            raw_events = processor.get_events();
+            errors = processor.get_errors();
         }
 
-        Ok(Some(self.event_receiver.recv_timeout(timeout)?))
-    }
+        if !raw_events.is_empty() && self.debug {
+            println!("raw_events: {:?}", raw_events);
+        }
 
-    pub fn start(&mut self, tick_rate_ms: u64) {
-        let notification_receiver = self.notification_receiver.clone();
-        let event_sender = self.event_sender.clone();
-        let stop_listening = self.stop_listening.clone();
-        let debug = self.debug;
+        if !errors.is_empty() {
+            eprintln!("errors: {:?}", errors);
+        }
 
-        let listen_thread = std::thread::spawn(move || {
-            while !stop_listening.load(Ordering::Relaxed) {
-                let timeout = Duration::from_millis(tick_rate_ms);
-                let timed_out_result = &notification_receiver.recv_timeout(timeout);
+        let mut events: Vec<EventType> = Vec::with_capacity(raw_events.len());
 
-                match timed_out_result {
-                    Ok(notification_result) => match notification_result {
-                        Ok(notifications) => {
-                            if debug {
-                                println!("{:?}", notifications);
-                            }
-
-                            for raw_notification in notifications {
-                                if let Some(event) = Self::create_event(raw_notification) {
-                                    event_sender.send(event).unwrap();
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!("error: {:?}", e);
-                        }
-                    },
-                    Err(e) => match e {
-                        RecvTimeoutError::Timeout => (),
-                        RecvTimeoutError::Disconnected => {
-                            eprintln!("error: {:?}", e);
-                        }
-                    },
-                };
+        for raw_event in raw_events {
+            if let Some(event) = Self::create_event(&raw_event) {
+                events.push(event);
             }
-        });
-
-        self.listen_thread = Some(listen_thread)
-    }
-
-    pub fn stop(&mut self) {
-        if let Some(listen_thread) = self.listen_thread.take() {
-            // self.debouncer.stop();
-
-            self.stop_listening.store(true, Ordering::Relaxed);
-
-            listen_thread.join().unwrap();
-            self.listen_thread = None;
         }
+
+        events
     }
 
     pub fn repr(&mut self) -> String {
-        format!("Watcher({:#?})", self.debouncer.watcher())
+        format!("Watcher({:#?})", self.watcher)
     }
 
     fn map_notify_error(notify_error: notify::Error) -> PyErr {

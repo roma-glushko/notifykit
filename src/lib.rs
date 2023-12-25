@@ -1,10 +1,13 @@
 mod events;
+mod file_cache;
+mod processor;
 mod watcher;
+
 extern crate notify;
 extern crate pyo3;
 
 use crate::watcher::{Watcher, WatcherError};
-use pyo3::exceptions::PyKeyboardInterrupt;
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use std::time::Duration;
 
@@ -25,45 +28,49 @@ pub struct WatcherWrapper {
 #[pymethods]
 impl WatcherWrapper {
     #[new]
-    fn __init__(debounce_ms: u64, debug: bool, debounce_tick_rate_ms: Option<u64>) -> PyResult<Self> {
-        let watcher = Watcher::new(debounce_ms, debounce_tick_rate_ms, debug);
+    fn __init__(debounce_ms: u64, debug: bool) -> PyResult<Self> {
+        let watcher = Watcher::new(debounce_ms, debug);
 
         Ok(WatcherWrapper { watcher: watcher? })
     }
 
-    pub fn get(&self, py: Python) -> PyResult<Option<PyObject>> {
-        loop {
-            match py.check_signals() {
-                Ok(_) => (),
-                Err(_) => {
-                    return Err(PyKeyboardInterrupt::new_err("KeyboardInterrupt"));
+    pub fn get(&self, py: Python, tick_ms: u64, stop_event: PyObject) -> PyResult<Option<Vec<PyObject>>> {
+        let is_stopping: Option<&PyAny> = match stop_event.is_none(py) {
+            true => None,
+            false => {
+                let event: &PyAny = stop_event.extract(py)?;
+                let func: &PyAny = event.getattr("is_set")?.extract()?;
+                if !func.is_callable() {
+                    return Err(PyTypeError::new_err("'stop_event.is_set' must be callable"));
                 }
-            };
-
-            let result = self.watcher.get(Duration::from_millis(200));
-
-            match result {
-                Ok(event_or_none) => {
-                    return match event_or_none {
-                        Some(event) => Ok(Some(event.to_object(py))),
-                        None => Ok(None),
-                    }
-                }
-                Err(_) => continue,
+                Some(func)
             }
+        };
+
+        loop {
+            py.allow_threads(|| std::thread::sleep(Duration::from_millis(tick_ms)));
+            py.check_signals()?;
+
+            if let Some(is_set) = is_stopping {
+                if is_set.call0()?.is_true()? {
+                    return Ok(None);
+                }
+            }
+
+            let events = self.watcher.get();
+
+            if events.is_empty() {
+                continue;
+            }
+
+            let mut py_events = Vec::with_capacity(events.len());
+
+            for event in events.iter() {
+                py_events.push(event.to_object(py))
+            }
+
+            return Ok(Some(py_events));
         }
-    }
-
-    pub fn start(&mut self, py: Python) -> PyResult<()> {
-        py.allow_threads(|| self.watcher.start(400));
-
-        Ok(())
-    }
-
-    pub fn stop(&mut self) -> PyResult<()> {
-        self.watcher.stop();
-
-        Ok(())
     }
 
     pub fn watch(&mut self, paths: Vec<String>, recursive: bool, ignore_permission_errors: bool) -> PyResult<()> {
