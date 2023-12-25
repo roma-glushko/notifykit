@@ -7,6 +7,7 @@ extern crate notify;
 extern crate pyo3;
 
 use crate::watcher::{Watcher, WatcherError};
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use std::time::Duration;
 
@@ -33,10 +34,28 @@ impl WatcherWrapper {
         Ok(WatcherWrapper { watcher: watcher? })
     }
 
-    pub fn get(&self, py: Python) -> PyResult<Vec<PyObject>> {
+    pub fn get(&self, py: Python, tick_ms: u64, stop_event: PyObject) -> PyResult<Option<Vec<PyObject>>> {
+        let is_stopping: Option<&PyAny> = match stop_event.is_none(py) {
+            true => None,
+            false => {
+                let event: &PyAny = stop_event.extract(py)?;
+                let func: &PyAny = event.getattr("is_set")?.extract()?;
+                if !func.is_callable() {
+                    return Err(PyTypeError::new_err("'stop_event.is_set' must be callable"));
+                }
+                Some(func)
+            }
+        };
+
         loop {
-            py.allow_threads(|| std::thread::sleep(Duration::from_millis(200)));  // TODO: parametrize
+            py.allow_threads(|| std::thread::sleep(Duration::from_millis(tick_ms)));
             py.check_signals()?;
+
+            if let Some(is_set) = is_stopping {
+                if is_set.call0()?.is_true()? {
+                    return Ok(None);
+                }
+            }
 
             let events = self.watcher.get();
 
@@ -50,7 +69,7 @@ impl WatcherWrapper {
                 py_events.push(event.to_object(py))
             }
 
-            return Ok(py_events);
+            return Ok(Some(py_events));
         }
     }
 
