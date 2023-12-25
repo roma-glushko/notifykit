@@ -12,9 +12,7 @@ from notifykit._notifykit_lib import (
     RenameEvent,
 )
 
-Event = (
-    AccessEvent | CreateEvent | ModifyDataEvent | ModifyMetadataEvent | ModifyOtherEvent | DeleteEvent | RenameEvent
-)
+Event = AccessEvent | CreateEvent | ModifyDataEvent | ModifyMetadataEvent | ModifyOtherEvent | DeleteEvent | RenameEvent
 
 
 class NotifierT(Protocol):
