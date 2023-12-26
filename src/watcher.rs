@@ -43,13 +43,12 @@ impl Watcher {
         )));
 
         let processor_c = processor.clone();
-        let debug_c = debug.clone()
 
         let watcher = RecommendedWatcher::new(
             move |e: Result<Event, notify::Error>| {
                 let mut event_processor = processor_c.lock().unwrap();
 
-                if debug_c {
+                if debug {
                     println!("raw event: {:?}", e);
                 }
 
