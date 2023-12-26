@@ -48,6 +48,10 @@ impl Watcher {
             move |e: Result<Event, notify::Error>| {
                 let mut event_processor = processor_c.lock().unwrap();
 
+                if debug {
+                    println!("raw event: {:?}", e);
+                }
+
                 match e {
                     Ok(e) => event_processor.add_event(e),
                     Err(e) => event_processor.add_error(e),
@@ -161,7 +165,7 @@ impl Watcher {
         }
 
         if !raw_events.is_empty() && self.debug {
-            println!("raw_events: {:?}", raw_events);
+            println!("processed events: {:?}", raw_events);
         }
 
         if !errors.is_empty() {
