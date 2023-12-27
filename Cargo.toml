@@ -19,3 +19,9 @@ walkdir = "2.4.0"
 [lib]
 name = "_notifykit_lib"
 crate-type = ["cdylib"]
+
+[dev-dependencies]
+deser-hjson = "2.2.4"
+mock_instant = "0.3.1"
+rstest = "0.18.2"
+serde = { version = "1.0.193", features = ["derive"] }

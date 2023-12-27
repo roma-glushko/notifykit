@@ -1,0 +1,19 @@
+{
+  "file_system": {
+    "/watch/file": 1
+  },
+  "cache": {
+    "/watch/file": 1
+  },
+  "events": [
+    { "kind": "create-file", "paths": ["/watch/.~file.tmp"] },
+    { "kind": "modify-data", "paths": ["/watch/.~file.tmp"] },
+    { "kind": "access-close-write", "paths": ["/watch/.~file.tmp"] },
+    { "kind": "modify-name-from", "paths": ["/watch/.~file.tmp"], "tracker": 1065382},
+    { "kind": "modify-name-to", "paths": ["/watch/file"], "tracker": 1065382 },
+    { "kind": "modify-name-both", "paths": ["/watch/.~file.tmp", "/watch/file"], "tracker": 1065382 }
+  ],
+  "processed_events": [
+
+  ]
+}

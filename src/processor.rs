@@ -3,6 +3,9 @@ use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 use std::time::Duration;
 
+#[cfg(test)]
+use mock_instant::Instant;
+
 #[cfg(not(test))]
 use std::time::Instant;
 
@@ -403,5 +406,224 @@ impl<T: FileIdCache> EventProcessor<T> {
                 },
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{env, fs, path::Path};
+
+    use rstest::rstest;
+    use super::*;
+
+    use mock_instant::MockClock;
+    use crate::file_cache::FileCacheMock;
+
+    use std::collections::HashMap;
+
+    use serde::Deserialize;
+
+    use notify::{
+        event::{
+            AccessKind, AccessMode, CreateKind, DataChange, Flag, MetadataKind, ModifyKind, RemoveKind,
+            RenameMode,
+        },
+        EventKind,
+    };
+
+    #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+    pub(crate) struct Error {
+        /// The error kind is parsed by `into_notify_error`
+        pub kind: String,
+
+        /// The error paths
+        #[serde(default)]
+        pub paths: Vec<String>,
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+    pub(crate) struct TestEvent {
+        /// The timestamp the event occurred
+        #[serde(default)]
+        pub time: u64,
+
+        /// The event kind is parsed by `into_notify_event`
+        pub kind: String,
+
+        /// The event paths
+        #[serde(default)]
+        pub paths: Vec<String>,
+
+        /// The event flags
+        #[serde(default)]
+        pub flags: Vec<String>,
+
+        /// The event tracker
+        pub tracker: Option<usize>,
+
+        /// The event info
+        pub info: Option<String>,
+
+        /// The file id for the file associated with the event
+        ///
+        /// Only used for the rename event.
+        pub file_id: Option<u64>,
+    }
+
+    impl TestEvent {
+        #[rustfmt::skip]
+        pub fn into_raw_event(self, time: Instant, path: Option<&str>) -> RawEvent {
+            let kind = match &*self.kind {
+                "any" => EventKind::Any,
+                "other" => EventKind::Other,
+                "access-any" => EventKind::Access(AccessKind::Any),
+                "access-read" => EventKind::Access(AccessKind::Read),
+                "access-open-any" => EventKind::Access(AccessKind::Open(AccessMode::Any)),
+                "access-open-execute" => EventKind::Access(AccessKind::Open(AccessMode::Execute)),
+                "access-open-read" => EventKind::Access(AccessKind::Open(AccessMode::Read)),
+                "access-open-write" => EventKind::Access(AccessKind::Open(AccessMode::Write)),
+                "access-open-other" => EventKind::Access(AccessKind::Open(AccessMode::Other)),
+                "access-close-any" => EventKind::Access(AccessKind::Close(AccessMode::Any)),
+                "access-close-execute" => EventKind::Access(AccessKind::Close(AccessMode::Execute)),
+                "access-close-read" => EventKind::Access(AccessKind::Close(AccessMode::Read)),
+                "access-close-write" => EventKind::Access(AccessKind::Close(AccessMode::Write)),
+                "access-close-other" => EventKind::Access(AccessKind::Close(AccessMode::Other)),
+                "access-other" => EventKind::Access(AccessKind::Other),
+                "create-any" => EventKind::Create(CreateKind::Any),
+                "create-file" => EventKind::Create(CreateKind::File),
+                "create-folder" => EventKind::Create(CreateKind::Folder),
+                "create-other" => EventKind::Create(CreateKind::Other),
+                "modify-any" => EventKind::Modify(ModifyKind::Any),
+                "modify-other" => EventKind::Modify(ModifyKind::Other),
+                "modify-data-any" => EventKind::Modify(ModifyKind::Data(DataChange::Any)),
+                "modify-data-size" => EventKind::Modify(ModifyKind::Data(DataChange::Size)),
+                "modify-data-content" => EventKind::Modify(ModifyKind::Data(DataChange::Content)),
+                "modify-data-other" => EventKind::Modify(ModifyKind::Data(DataChange::Other)),
+                "modify-metadata-any" => EventKind::Modify(ModifyKind::Metadata(MetadataKind::Any)),
+                "modify-metadata-access-time" => EventKind::Modify(ModifyKind::Metadata(MetadataKind::AccessTime)),
+                "modify-metadata-write-time" => EventKind::Modify(ModifyKind::Metadata(MetadataKind::WriteTime)),
+                "modify-metadata-permissions" => EventKind::Modify(ModifyKind::Metadata(MetadataKind::Permissions)),
+                "modify-metadata-ownership" => EventKind::Modify(ModifyKind::Metadata(MetadataKind::Ownership)),
+                "modify-metadata-extended" => EventKind::Modify(ModifyKind::Metadata(MetadataKind::Extended)),
+                "modify-metadata-other" => EventKind::Modify(ModifyKind::Metadata(MetadataKind::Other)),
+                "rename-any" => EventKind::Modify(ModifyKind::Name(RenameMode::Any)),
+                "rename-from" => EventKind::Modify(ModifyKind::Name(RenameMode::From)),
+                "rename-to" => EventKind::Modify(ModifyKind::Name(RenameMode::To)),
+                "rename-both" => EventKind::Modify(ModifyKind::Name(RenameMode::Both)),
+                "rename-other" => EventKind::Modify(ModifyKind::Name(RenameMode::Other)),
+                "remove-any" => EventKind::Remove(RemoveKind::Any),
+                "remove-file" => EventKind::Remove(RemoveKind::File),
+                "remove-folder" => EventKind::Remove(RemoveKind::Folder),
+                "remove-other" => EventKind::Remove(RemoveKind::Other),
+                _ => panic!("unknown event type `{}`", self.kind),
+            };
+            let mut event = notify::Event::new(kind);
+
+            for p in self.paths {
+                event = event.add_path(if p == "*" {
+                    PathBuf::from(path.expect("cannot replace `*`"))
+                } else {
+                    PathBuf::from(p)
+                });
+
+                if let Some(tracker) = self.tracker {
+                    event = event.set_tracker(tracker);
+                }
+
+                if let Some(info) = &self.info {
+                    event = event.set_info(info.as_str());
+                }
+            }
+
+            for f in self.flags {
+                let flag = match &*f {
+                    "rescan" => Flag::Rescan,
+                    _ => panic!("unknown event flag `{f}`"),
+                };
+
+                event = event.set_flag(flag);
+            }
+
+            RawEvent { event, time: time + Duration::from_millis(self.time) }
+        }
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+    pub(crate) struct TestCase {
+        /// A map of file ids, used instead of accessing the file system
+        #[serde(default)]
+        pub file_system: HashMap<String, u64>,
+
+        /// Cached file ids
+        #[serde(default)]
+        pub cache: HashMap<String, u64>,
+
+        /// Incoming events that are added during the test
+        #[serde(default)]
+        pub events: Vec<TestEvent>,
+
+        /// Incoming errors that are added during the test
+        #[serde(default)]
+        pub errors: Vec<Error>,
+
+        /// Events expected to get after processing
+        #[serde(default)]
+        pub processed_events: Vec<TestEvent>,
+
+        #[serde(default)]
+        pub processed_errors: Vec<Error>,
+    }
+
+    #[rstest]
+    fn test_processor_output_events(
+        #[values("atomic_file_update")]
+        test_case_name: &str
+    ) {
+        println!("CWD: {:?}", env::current_dir().unwrap());
+
+        let content = fs::read_to_string(Path::new(&format!("./testcases/processor/{test_case_name}.hjson"))).unwrap();
+        let mut test_case = deser_hjson::from_str::<TestCase>(&content).unwrap();
+
+        MockClock::set_time(Duration::default());
+
+        let time = Instant::now();
+
+        let cache = test_case
+            .cache
+            .into_iter()
+            .map(|(path, id)| {
+                let path = PathBuf::from(path);
+                let id = FileId::new_inode(id, id);
+                (path, id)
+            })
+            .collect::<HashMap<_, _>>();
+
+        let file_system = test_case
+            .file_system
+            .into_iter()
+            .map(|(path, id)| {
+                let path = PathBuf::from(path);
+                let id = FileId::new_inode(id, id);
+                (path, id)
+            })
+            .collect::<HashMap<_, _>>();
+
+        let file_cache = FileCacheMock::new(cache, file_system);
+        let mut processor = EventProcessor::new(file_cache, Duration::from_millis(20));
+
+        for event in test_case.events {
+            let event = event.into_raw_event(time, None);
+            MockClock::set_time(event.time - time);
+
+            processor.add_event(event.event);
+        }
+
+        // let expected_errors = std::mem::take(&mut test_case.expected.errors);
+        let expected_events = std::mem::take(&mut test_case.processed_events);
+
+        // for error in test_case.errors {
+        //     let e = error.into_notify_error();
+        //     state.add_error(e);
+        // }
     }
 }

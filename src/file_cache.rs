@@ -139,3 +139,38 @@ impl FileIdCache for NoCache {
 
     fn rescan(&mut self) {}
 }
+
+#[cfg(test)]
+#[derive(Debug, Clone)]
+pub struct FileCacheMock {
+    pub paths: HashMap<PathBuf, FileId>,
+    pub file_system: HashMap<PathBuf, FileId>,
+}
+
+impl FileCacheMock {
+    pub fn new(paths: HashMap<PathBuf, FileId>, file_system: HashMap<PathBuf, FileId>) -> Self {
+        Self { paths, file_system }
+    }
+}
+
+impl FileIdCache for FileCacheMock {
+    fn get_file_id(&self, path: &Path) -> Option<&FileId> {
+        self.paths.get(path)
+    }
+
+    fn add_path(&mut self, path: &Path) {
+        for (p, file_id) in &self.file_system {
+            if p.starts_with(path) {
+                self.paths.insert(p.clone(), file_id.clone());
+            }
+        }
+    }
+
+    fn remove_path(&mut self, path: &Path) {
+        self.paths.remove(path);
+    }
+
+    fn rescan(&mut self) {
+        self.add_path(&Path::new("/"))
+    }
+}

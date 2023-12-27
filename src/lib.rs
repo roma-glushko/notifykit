@@ -1,6 +1,6 @@
 mod events;
 mod file_cache;
-mod processor;
+pub mod processor;
 mod watcher;
 
 extern crate notify;
