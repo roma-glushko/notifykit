@@ -42,6 +42,7 @@ pub struct FileCache {
     roots: Vec<(PathBuf, RecursiveMode)>,
 }
 
+#[allow(unused)]
 impl FileCache {
     /// Construct an empty cache.
     pub fn new() -> Self {
