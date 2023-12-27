@@ -439,19 +439,15 @@ impl BatchProcessor {
 impl EventProcessor for BatchProcessor {
     fn get_events(&mut self) -> Vec<RawEvent> {
         let now = Instant::now();
-        let mut events_to_return = Vec::with_capacity(self.events.len());
 
-        let mut events_c = self.events.clone();
+        // Assuming expired items are contiguous and at the beginning of the vector
+        let first_expired_index = self
+            .events
+            .iter()
+            .position(|event| now.saturating_duration_since(event.time) >= self.buffering_time)
+            .unwrap_or(self.events.len());
 
-        for event in events_c.drain(..) {
-            if now.saturating_duration_since(event.time) >= self.buffering_time {
-                events_to_return.push(event);
-            } else {
-                self.events.push(event);
-            }
-        }
-
-        events_to_return
+        self.events.drain(0..first_expired_index).collect()
     }
 
     fn get_errors(&mut self) -> Vec<NotifyError> {
