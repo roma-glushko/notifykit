@@ -1,4 +1,4 @@
-from notifykit._notifier import Notifier, NotifierT
+from notifykit._notifier import Notifier, NotifierT, Event
 from notifykit._notifykit_lib import (
     __version__,
     ObjectType,
@@ -22,6 +22,7 @@ __all__ = (
     "Notifier",
     "NotifierT",
     "VERSION",
+    "Event",
     "ObjectType",
     "AccessType",
     "AccessMode",
