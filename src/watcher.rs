@@ -19,8 +19,8 @@ use crate::events::delete::from_delete_kind;
 use crate::events::modify::{from_data_kind, from_metadata_kind, ModifyOtherEvent, ModifyUnknownEvent};
 use crate::events::rename::from_rename_mode;
 use crate::events::EventType;
-use crate::file_cache::FileCache;
-use crate::processor::{EventProcessor, RawEvent};
+// use crate::file_cache::FileCache;
+use crate::processor::{BatchProcessor, EventProcessor, RawEvent};
 
 pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
 
@@ -28,19 +28,19 @@ pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
 pub(crate) struct Watcher {
     debug: bool,
     watcher: RecommendedWatcher,
-    file_cache: FileCache,
-    processor: Arc<Mutex<EventProcessor<FileCache>>>,
+    // file_cache: FileCache,
+    processor: Arc<Mutex<BatchProcessor>>, // TODO: use the EventProcessor trait instead
 }
 
 impl Watcher {
     pub fn new(buffering_time_ms: u64, debug: bool) -> PyResult<Self> {
-        let file_cache = FileCache::new();
-        let file_cache_c = file_cache.clone();
+        // TODO: hide usage of file cache from Watcher
+        // let file_cache = FileCache::new();
+        // let file_cache_c = file_cache.clone();
 
-        let processor = Arc::new(Mutex::new(EventProcessor::new(
-            file_cache_c,
-            Duration::from_millis(buffering_time_ms),
-        )));
+        let processor = Arc::new(Mutex::new(BatchProcessor::new(Duration::from_millis(
+            buffering_time_ms,
+        ))));
 
         let processor_c = processor.clone();
 
@@ -64,7 +64,7 @@ impl Watcher {
         Ok(Watcher {
             debug,
             watcher,
-            file_cache,
+            // file_cache,
             processor,
         })
     }
@@ -94,7 +94,7 @@ impl Watcher {
                 }
             }
 
-            self.file_cache.add_root(path, mode);
+            // self.file_cache.add_root(path, mode);
         }
 
         if self.debug {
@@ -114,7 +114,7 @@ impl Watcher {
                 return Err(Self::map_notify_error(err));
             }
 
-            self.file_cache.remove_root(path);
+            // self.file_cache.remove_root(path);
         }
 
         if self.debug {
