@@ -1,6 +1,6 @@
 [package]
 name = "notifykit_lib"
-version = "0.0.5"
+version = "0.0.6"
 edition = "2021"
 license = "A toolkit for building applications watching filesystem changes"
 homepage = "https://github.com/roma-glushko/notifykit"
