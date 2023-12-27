@@ -1,6 +1,6 @@
 from os import PathLike
 import anyio
-from typing import Sequence, Protocol, Optional, Any, List
+from typing import Sequence, Protocol, Optional, List
 from notifykit._notifykit_lib import (
     WatcherWrapper,
     AccessEvent,
@@ -32,16 +32,16 @@ class NotifierT(Protocol):
     def unwatch(self, paths: Sequence[str]) -> None:
         ...
 
-    def __enter__(self) -> "Notifier":
-        ...
-
-    def __exit__(self, *args: Any, **kwargs: Any) -> None:
-        ...
-
     def __aiter__(self) -> "Notifier":
         ...
 
     def __iter__(self) -> "Notifier":
+        ...
+
+    def __next__(self) -> List[Event]:
+        ...
+
+    async def __anext__(self) -> List[Event]:
         ...
 
 
