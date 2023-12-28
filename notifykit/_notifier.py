@@ -1,6 +1,6 @@
 from os import PathLike
 import anyio
-from typing import Sequence, Protocol, Optional, List
+from typing import Sequence, Protocol, Optional, List, AsyncGenerator, Generator
 from notifykit._notifykit_lib import (
     WatcherWrapper,
     AccessEvent,
@@ -29,7 +29,7 @@ class NotifierT(Protocol):
     ) -> None:
         ...
 
-    def unwatch(self, paths: Sequence[str]) -> None:
+    def unwatch(self, paths: Sequence[PathLike[str]]) -> None:
         ...
 
     def __aiter__(self) -> "Notifier":
@@ -38,10 +38,10 @@ class NotifierT(Protocol):
     def __iter__(self) -> "Notifier":
         ...
 
-    def __next__(self) -> List[Event]:
+    def __next__(self) -> Generator[List[Event], None, None]:
         ...
 
-    async def __anext__(self) -> List[Event]:
+    async def __anext__(self) -> AsyncGenerator[List[Event], None]:
         ...
 
 
@@ -83,28 +83,30 @@ class Notifier:
     def __iter__(self) -> "Notifier":
         return self
 
-    def __next__(self) -> List[Event]:
-        events = self._watcher.get(self._tick_ms, self._stop_event)
-
-        if events is None:
-            raise StopIteration
-
-        return events
-
-    async def __anext__(self) -> List[Event]:
-        CancelledError = anyio.get_cancelled_exc_class()
-
-        async with anyio.create_task_group() as tg:
-            try:
-                events = await anyio.to_thread.run_sync(self._watcher.get, self._tick_ms, self._stop_event)
-            except (CancelledError, KeyboardInterrupt):
-                self._stop_event.set()
-                # suppressing KeyboardInterrupt wouldn't stop it getting raised by the top level asyncio.run call
-                raise
-
-            tg.cancel_scope.cancel()
+    def __next__(self) -> Generator[List[Event], None, None]:
+        while True:
+            events = self._watcher.get(self._tick_ms, self._stop_event)
 
             if events is None:
-                raise StopIteration
+                return
 
-            return events
+            yield events
+
+    async def __anext__(self) -> AsyncGenerator[List[Event], None]:
+        CancelledError = anyio.get_cancelled_exc_class()
+
+        while True:
+            async with anyio.create_task_group() as tg:
+                try:
+                    events = await anyio.to_thread.run_sync(self._watcher.get, self._tick_ms, self._stop_event)
+                except (CancelledError, KeyboardInterrupt):
+                    self._stop_event.set()
+                    # suppressing KeyboardInterrupt wouldn't stop it getting raised by the top level asyncio.run call
+                    raise
+
+                tg.cancel_scope.cancel()
+
+                if events is None:
+                    return
+
+                yield events
