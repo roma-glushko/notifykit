@@ -42,12 +42,14 @@ class NotifierMock:
     def __iter__(self) -> "NotifierMock":
         return self
 
-    def __next__(self) -> Generator[List[Event], None, None]:
-        for events_batch in self._events_batches:
-            if events_batch:
-                yield events_batch
+    def __next__(self) -> List[Event]:
+        if not self._events_batches:
+            raise StopIteration
 
-    async def __anext__(self) -> AsyncGenerator[List[Event], None]:
-        for events_batch in self._events_batches:
-            if events_batch:
-                yield events_batch
+        return self._events_batches.pop(0)
+
+    async def __anext__(self) -> List[Event]:
+        if not self._events_batches:
+            raise StopAsyncIteration
+
+        return self._events_batches.pop(0)

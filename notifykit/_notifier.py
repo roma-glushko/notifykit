@@ -83,30 +83,28 @@ class Notifier:
     def __iter__(self) -> "Notifier":
         return self
 
-    def __next__(self) -> Generator[List[Event], None, None]:
-        while True:
-            events = self._watcher.get(self._tick_ms, self._stop_event)
+    def __next__(self) -> List[Event]:
+        events = self._watcher.get(self._tick_ms, self._stop_event)
 
-            if events is None:
-                return
+        if events is None:
+            raise StopIteration
 
-            yield events
+        return events
 
     async def __anext__(self) -> AsyncGenerator[List[Event], None]:
         CancelledError = anyio.get_cancelled_exc_class()
 
-        while True:
-            async with anyio.create_task_group() as tg:
-                try:
-                    events = await anyio.to_thread.run_sync(self._watcher.get, self._tick_ms, self._stop_event)
-                except (CancelledError, KeyboardInterrupt):
-                    self._stop_event.set()
-                    # suppressing KeyboardInterrupt wouldn't stop it getting raised by the top level asyncio.run call
-                    raise
+        async with anyio.create_task_group() as tg:
+            try:
+                events = await anyio.to_thread.run_sync(self._watcher.get, self._tick_ms, self._stop_event)
+            except (CancelledError, KeyboardInterrupt):
+                self._stop_event.set()
+                # suppressing KeyboardInterrupt wouldn't stop it getting raised by the top level asyncio.run call
+                raise
 
-                tg.cancel_scope.cancel()
+            tg.cancel_scope.cancel()
 
-                if events is None:
-                    return
+            if events is None:
+                raise StopAsyncIteration
 
-                yield events
+            return events
