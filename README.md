@@ -44,12 +44,12 @@ from notifykit import Notifier
 
 
 async def watch(watched_dir: Path) -> None:
-    with Notifier(debounce_ms=200, debug=True) as notifier:
-        notifier.watch([watched_dir])
+    notifier = Notifier(debounce_ms=200, debug=True)
+    notifier.watch([watched_dir])
 
-        async for event in notifier:
-            # process your events
-            print(event)
+    async for event in notifier:
+        # process your events
+        print(event)
 
 
 if __name__ == "__main__":

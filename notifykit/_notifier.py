@@ -1,6 +1,6 @@
 from os import PathLike
 import anyio
-from typing import Sequence, Protocol, Optional, List, AsyncGenerator
+from typing import Sequence, Protocol, Optional, List
 from notifykit._notifykit_lib import (
     WatcherWrapper,
     AccessEvent,
@@ -91,7 +91,7 @@ class Notifier:
 
         return events
 
-    async def __anext__(self) -> AsyncGenerator[List[Event], None]:
+    async def __anext__(self) -> List[Event]:
         CancelledError = anyio.get_cancelled_exc_class()
 
         async with anyio.create_task_group() as tg:

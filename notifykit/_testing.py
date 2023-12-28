@@ -1,7 +1,8 @@
 from os import PathLike
-from typing import Sequence, List
+from typing import Sequence, List, Optional
 
 from notifykit import Event
+from notifykit._notifier import AnyEvent
 
 
 class NotifierMock:
@@ -9,9 +10,16 @@ class NotifierMock:
     A notifier mock that allows to control filesystems events without actually watching the filesystem
     """
 
-    def __init__(self, events_batches: List[List[Event]]) -> None:
+    def __init__(
+        self,
+        events_batches: Optional[List[List[Event]]] = None,
+        debounce_ms: int = 200,
+        tick_ms: int = 50,
+        debug: bool = False,
+        stop_event: Optional[AnyEvent] = None,
+    ) -> None:
         self._watch_paths: List[PathLike[str]] = []
-        self._events_batches = events_batches
+        self._events_batches = events_batches or []
 
     @property
     def watch_paths(self) -> List[PathLike[str]]:

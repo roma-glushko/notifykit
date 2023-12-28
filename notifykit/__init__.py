@@ -16,6 +16,8 @@ from notifykit._notifykit_lib import (
     CreateEvent,
 )
 
+from notifykit._testing import NotifierMock
+
 VERSION = __version__
 
 __all__ = (
@@ -34,6 +36,7 @@ __all__ = (
     "RenameEvent",
     "DataType",
     "MetadataType",
+    "NotifierMock",
     "DeleteEvent",
     "CreateEvent",
 )
