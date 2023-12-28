@@ -445,7 +445,7 @@ impl EventProcessor for BatchProcessor {
             .events
             .iter()
             .position(|event| now.saturating_duration_since(event.time) < self.buffering_time)
-            .unwrap_or_else(|| self.events.len());
+            .unwrap_or(self.events.len());
 
         self.events.drain(0..first_non_expired_index).collect()
     }
