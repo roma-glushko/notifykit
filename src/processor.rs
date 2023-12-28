@@ -441,13 +441,13 @@ impl EventProcessor for BatchProcessor {
         let now = Instant::now();
 
         // Assuming expired items are contiguous and at the beginning of the vector
-        let first_expired_index = self
+        let first_non_expired_index = self
             .events
             .iter()
-            .position(|event| now.saturating_duration_since(event.time) >= self.buffering_time)
-            .unwrap_or(self.events.len());
+            .position(|event| now.saturating_duration_since(event.time) < self.buffering_time)
+            .unwrap_or_else(|| self.events.len());
 
-        self.events.drain(0..first_expired_index).collect()
+        self.events.drain(0..first_non_expired_index).collect()
     }
 
     fn get_errors(&mut self) -> Vec<NotifyError> {
