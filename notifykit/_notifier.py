@@ -1,6 +1,6 @@
 from os import PathLike
 import anyio
-from typing import Sequence, Protocol, Optional, List, AsyncGenerator, Generator
+from typing import Sequence, Protocol, Optional, List, AsyncGenerator
 from notifykit._notifykit_lib import (
     WatcherWrapper,
     AccessEvent,

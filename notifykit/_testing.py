@@ -1,5 +1,5 @@
 from os import PathLike
-from typing import Sequence, List, Generator, AsyncGenerator
+from typing import Sequence, List
 
 from notifykit import Event
 
