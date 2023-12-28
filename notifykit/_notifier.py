@@ -1,6 +1,6 @@
 from os import PathLike
 import anyio
-from typing import Sequence, Protocol, Optional, List
+from typing import Sequence, Protocol, Optional, List, AsyncGenerator
 from notifykit._notifykit_lib import (
     WatcherWrapper,
     AccessEvent,
@@ -29,7 +29,7 @@ class NotifierT(Protocol):
     ) -> None:
         ...
 
-    def unwatch(self, paths: Sequence[str]) -> None:
+    def unwatch(self, paths: Sequence[PathLike[str]]) -> None:
         ...
 
     def __aiter__(self) -> "Notifier":
@@ -91,7 +91,7 @@ class Notifier:
 
         return events
 
-    async def __anext__(self) -> List[Event]:
+    async def __anext__(self) -> AsyncGenerator[List[Event], None]:
         CancelledError = anyio.get_cancelled_exc_class()
 
         async with anyio.create_task_group() as tg:
@@ -105,6 +105,6 @@ class Notifier:
             tg.cancel_scope.cancel()
 
             if events is None:
-                raise StopIteration
+                raise StopAsyncIteration
 
             return events
