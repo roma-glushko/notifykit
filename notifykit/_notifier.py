@@ -38,10 +38,10 @@ class NotifierT(Protocol):
     def __iter__(self) -> "Notifier":
         ...
 
-    def __next__(self) -> Generator[List[Event], None, None]:
+    def __next__(self) -> List[Event]:
         ...
 
-    async def __anext__(self) -> AsyncGenerator[List[Event], None]:
+    async def __anext__(self) -> List[Event]:
         ...
 
 
