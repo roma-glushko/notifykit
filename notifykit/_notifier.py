@@ -1,18 +1,15 @@
 from os import PathLike
 import anyio
+import logging
 from typing import Sequence, Protocol, Optional, List
 from notifykit._notifykit_lib import (
     WatcherWrapper,
-    AccessEvent,
-    CreateEvent,
-    ModifyDataEvent,
-    ModifyMetadataEvent,
-    ModifyOtherEvent,
-    DeleteEvent,
-    RenameEvent,
 )
 
-Event = AccessEvent | CreateEvent | ModifyDataEvent | ModifyMetadataEvent | ModifyOtherEvent | DeleteEvent | RenameEvent
+from notifykit._typing import Event
+from notifykit._filters import EventFilter
+
+logger = logging.getLogger(__name__)
 
 
 class AnyEvent(Protocol):
@@ -51,13 +48,19 @@ class Notifier:
     """
 
     def __init__(
-        self, debounce_ms: int = 200, tick_ms: int = 50, debug: bool = False, stop_event: Optional[AnyEvent] = None
+        self,
+        debounce_ms: int = 200,
+        tick_ms: int = 50,
+        debug: bool = False,
+        filter: Optional[EventFilter] = None,
+        stop_event: Optional[AnyEvent] = None,
     ) -> None:
         self._debounce_ms = debounce_ms
         self._tick_ms = tick_ms
         self._debug = debug
 
         self._watcher = WatcherWrapper(debounce_ms, debug)
+        self._filter = filter
         self._stop_event = stop_event if stop_event else anyio.Event()
 
     def watch(
@@ -89,6 +92,12 @@ class Notifier:
         if events is None:
             raise StopIteration
 
+        if self._filter:
+            if self._debug:
+                logger.debug(f"events before filtering: {events}")
+
+            events = [event for event in events if not self._filter(event)]
+
         return events
 
     async def __anext__(self) -> List[Event]:
@@ -106,5 +115,11 @@ class Notifier:
 
             if events is None:
                 raise StopAsyncIteration
+
+            if self._filter:
+                if self._debug:
+                    logger.debug(f"events before filtering: {events}")
+
+                events = [event for event in events if not self._filter(event)]
 
             return events

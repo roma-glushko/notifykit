@@ -1,7 +1,7 @@
 from os import PathLike
 from typing import Sequence, List, Optional
 
-from notifykit import Event
+from notifykit._typing import Event
 from notifykit._notifier import AnyEvent
 
 

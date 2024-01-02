@@ -1,6 +1,6 @@
 [project]
 name = "notifykit"
-version = "0.0.7a1"
+version = "0.0.8a1"
 description = "A modern efficient Python toolkit for building applications that need to watch filesystem changes"
 authors = [
     {name = "Roman Glushko", email = "roman.glushko.m@gmail.com"},
@@ -33,7 +33,7 @@ bindings = 'pyo3'
 
 [tool.pdm.dev-dependencies]
 dev = [
-    "pytest>=7.4.3",
+    "pytest>=7.4.4",
     "mypy>=1.4.1",
     "ruff>=0.1.5",
     "mkdocs-material[imaging]>=9.4.8",
