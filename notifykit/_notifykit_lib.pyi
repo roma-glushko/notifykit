@@ -52,31 +52,47 @@ class AccessEvent:
     access_type: AccessType
     access_mode: Optional[AccessMode]
 
+    def __init__(self, path: str, access_type: AccessType, access_mode: Optional[AccessMode]) -> None: ...
+
 class CreateEvent:
     path: Path
     file_type: ObjectType
+
+    def __init__(self, path: str, file_type: ObjectType) -> None: ...
 
 class ModifyDataEvent:
     path: Path
     data_type: DataType
 
+    def __init__(self, path: str, data_type: DataType) -> None: ...
+
 class ModifyMetadataEvent:
     path: Path
     metadata_type: MetadataType
 
+    def __init__(self, path: str, metadata_type: MetadataType) -> None: ...
+
 class ModifyOtherEvent:
     path: Path
 
+    def __init__(self, path: str) -> None: ...
+
 class ModifyUnknownEvent:
     path: Path
+
+    def __init__(self, path: str) -> None: ...
 
 class DeleteEvent:
     path: Path
     file_type: ObjectType
 
+    def __init__(self, path: str, file_type: ObjectType) -> None: ...
+
 class RenameEvent:
     old_path: Path
     new_path: Path
+
+    def __init__(self, old_path: str, new_path: str) -> None: ...
 
 class WatcherWrapper:
     """
