@@ -2,7 +2,9 @@ import re
 from pathlib import Path
 from typing import Sequence, Union
 
-from notifykit import Event, RenameEvent
+from notifykit._notifykit_lib import RenameEvent
+
+from notifykit._typing import Event
 
 
 class EventFilter:
@@ -36,9 +38,9 @@ class EventFilter:
         Check if event should be filtered (True) or kept in place (False)
         """
         if isinstance(event, RenameEvent):
-            return self._should_be_filtered(event.old_path) and self._should_be_filtered(event.new_path)
+            return self._should_be_filtered(Path(event.old_path)) and self._should_be_filtered(Path(event.new_path))
 
-        return self._should_be_filtered(event.path)
+        return self._should_be_filtered(Path(event.path))
 
     def _should_be_filtered(self, path: Path) -> bool:
         if any(p in self._ignore_dirs for p in path.parts):

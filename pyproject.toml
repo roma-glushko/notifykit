@@ -33,7 +33,7 @@ bindings = 'pyo3'
 
 [tool.pdm.dev-dependencies]
 dev = [
-    "pytest>=7.4.3",
+    "pytest>=7.4.4",
     "mypy>=1.4.1",
     "ruff>=0.1.5",
     "mkdocs-material[imaging]>=9.4.8",

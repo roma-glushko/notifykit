@@ -4,20 +4,12 @@ import logging
 from typing import Sequence, Protocol, Optional, List
 from notifykit._notifykit_lib import (
     WatcherWrapper,
-    AccessEvent,
-    CreateEvent,
-    ModifyDataEvent,
-    ModifyMetadataEvent,
-    ModifyOtherEvent,
-    DeleteEvent,
-    RenameEvent,
 )
 
-from notifykit import EventFilter
+from notifykit._typing import Event
+from notifykit._filters import EventFilter
 
 logger = logging.getLogger(__name__)
-
-Event = AccessEvent | CreateEvent | ModifyDataEvent | ModifyMetadataEvent | ModifyOtherEvent | DeleteEvent | RenameEvent
 
 
 class AnyEvent(Protocol):
