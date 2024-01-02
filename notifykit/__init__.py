@@ -1,3 +1,4 @@
+from notifykit._filters import EventFilter
 from notifykit._notifier import Notifier, NotifierT, Event
 from notifykit._notifykit_lib import (
     __version__,
@@ -24,6 +25,7 @@ __all__ = (
     "Notifier",
     "NotifierT",
     "VERSION",
+    "EventFilter",
     "Event",
     "ObjectType",
     "AccessType",
