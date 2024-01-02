@@ -48,49 +48,49 @@ class MetadataType(IntEnum):
     OTHER = 6
 
 class AccessEvent:
-    path: Path
+    path: str
     access_type: AccessType
     access_mode: Optional[AccessMode]
 
     def __init__(self, path: str, access_type: AccessType, access_mode: Optional[AccessMode]) -> None: ...
 
 class CreateEvent:
-    path: Path
+    path: str
     file_type: ObjectType
 
     def __init__(self, path: str, file_type: ObjectType) -> None: ...
 
 class ModifyDataEvent:
-    path: Path
+    path: str
     data_type: DataType
 
     def __init__(self, path: str, data_type: DataType) -> None: ...
 
 class ModifyMetadataEvent:
-    path: Path
+    path: str
     metadata_type: MetadataType
 
     def __init__(self, path: str, metadata_type: MetadataType) -> None: ...
 
 class ModifyOtherEvent:
-    path: Path
+    path: str
 
     def __init__(self, path: str) -> None: ...
 
 class ModifyUnknownEvent:
-    path: Path
+    path: str
 
     def __init__(self, path: str) -> None: ...
 
 class DeleteEvent:
-    path: Path
+    path: str
     file_type: ObjectType
 
     def __init__(self, path: str, file_type: ObjectType) -> None: ...
 
 class RenameEvent:
-    old_path: Path
-    new_path: Path
+    old_path: str
+    new_path: str
 
     def __init__(self, old_path: str, new_path: str) -> None: ...
 
