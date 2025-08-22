@@ -31,7 +31,7 @@ jobs:
         uses: Swatinem/rust-cache@v1
 
       - name: Setup PDM
-        uses: pdm-project/setup-pdm@v3
+        uses: pdm-project/setup-pdm@v4
 
       # You are now able to use PDM in your workflow
       - name: Install dependencies
@@ -89,7 +89,7 @@ jobs:
 #        uses: Swatinem/rust-cache@v1
 #
 #      - name: Setup PDM
-#        uses: pdm-project/setup-pdm@v3
+#        uses: pdm-project/setup-pdm@v4
 #
 #      # You are now able to use PDM in your workflow
 #      - name: Install dependencies
