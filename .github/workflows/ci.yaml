@@ -147,8 +147,9 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: wheels-${{ runner.os }}-${{ matrix.target }}-${{ matrix.manylinux || 'auto' }}
           path: dist
+          if-no-files-found: error
 
   build-macos:
     name: Build on MacOS (${{ matrix.target }})
@@ -182,8 +183,9 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: wheels-${{ runner.os }}-${{ matrix.target }}
           path: dist
+          if-no-files-found: error
 
   build-windows:
     name: Build on Windows (${{ matrix.target }})
@@ -211,8 +213,9 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: wheels-${{ runner.os }}-${{ matrix.target }}
           path: dist
+          if-no-files-found: error
 
   sdist:
     name: sdist
@@ -238,10 +241,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: get dist artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: wheels
+          pattern: wheels-*
           path: dist
+          merge-multiple: true
 
       - name: list dist files
         run: |
