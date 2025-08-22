@@ -21,12 +21,12 @@ class AnyEvent(Protocol):
 
 
 class NotifierT(Protocol):
-    def watch(
+    async def watch(
         self, paths: Sequence[PathLike[str]], recursive: bool = True, ignore_permission_errors: bool = False
     ) -> None:
         ...
 
-    def unwatch(self, paths: Sequence[PathLike[str]]) -> None:
+    async def unwatch(self, paths: Sequence[PathLike[str]]) -> None:
         ...
 
     def __aiter__(self) -> "Notifier":
@@ -63,16 +63,20 @@ class Notifier:
         self._filter = filter
         self._stop_event = stop_event if stop_event else anyio.Event()
 
-    def watch(
+    async def watch(
         self,
         paths: Sequence[PathLike[str]],
         recursive: bool = True,
         ignore_permission_errors: bool = False,
     ) -> None:
-        self._watcher.watch([str(path) for path in paths], recursive, ignore_permission_errors)
+        await anyio.to_thread.run_sync(
+            self._watcher.watch,
+            [str(path) for path in paths],
+            recursive, ignore_permission_errors,
+        )
 
-    def unwatch(self, paths: Sequence[str]) -> None:
-        self._watcher.unwatch(list(paths))
+    async def unwatch(self, paths: Sequence[str]) -> None:
+        await anyio.to_thread.run_sync(self._watcher.unwatch, list(paths))
 
     def get(self) -> Optional[List[Event]]:
         return self._watcher.get(self._tick_ms, self._stop_event)

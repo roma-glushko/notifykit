@@ -45,7 +45,7 @@ from notifykit import Notifier
 
 async def watch(watched_dir: Path) -> None:
     notifier = Notifier(debounce_ms=200, debug=True)
-    notifier.watch([watched_dir])
+    await notifier.watch([watched_dir])
 
     async for event in notifier:
         # process your events
