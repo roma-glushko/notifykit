@@ -97,7 +97,7 @@ class Notifier:
 
         return events
 
-    async def __anext__(self) -> List[Event]:  # type: ignore[return-value]
+    async def __anext__(self) -> List[Event]:  # type: ignore[return]
         CancelledError = anyio.get_cancelled_exc_class()
 
         async with anyio.create_task_group() as tg:
