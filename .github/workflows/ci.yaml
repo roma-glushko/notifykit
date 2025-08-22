@@ -227,10 +227,11 @@ jobs:
         with:
           command: sdist
           args: --out dist
+
       - name: Upload sdist
         uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: sdist
           path: dist
 
   list-wheels:
@@ -246,6 +247,11 @@ jobs:
           pattern: wheels-*
           path: dist
           merge-multiple: true
+      - name: get sdist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
 
       - name: list dist files
         run: |
@@ -294,9 +300,15 @@ jobs:
       - run: pip install twine
 
       - name: get dist artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: wheels
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+      - name: get sdist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sdist
           path: dist
 
       - run: twine check dist/*
