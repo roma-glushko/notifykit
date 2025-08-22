@@ -32,7 +32,7 @@ class NotifierMock:
     def add_event_batch(self, events_batch: List[Event]) -> None:
         self._events_batches.append(events_batch)
 
-    def watch(
+    async def watch(
         self,
         paths: Sequence[PathLike[str]],
         recursive: bool = True,
@@ -40,7 +40,7 @@ class NotifierMock:
     ) -> None:
         self._watch_paths.extend(paths)
 
-    def unwatch(self, paths: Sequence[PathLike[str]]) -> None:
+    async def unwatch(self, paths: Sequence[PathLike[str]]) -> None:
         for path in paths:
             self._watch_paths.remove(path)
 
