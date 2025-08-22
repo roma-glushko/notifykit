@@ -17,7 +17,7 @@ jobs:
 
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: install rust
         uses: actions-rs/toolchain@v1
@@ -123,7 +123,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Build CPython Wheels
         uses: PyO3/maturin-action@v1
@@ -161,7 +161,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Build CPython Wheels
         uses: PyO3/maturin-action@v1
@@ -196,7 +196,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           architecture: ${{ matrix.target }}
 
       - name: Build wheels
@@ -285,7 +285,7 @@ jobs:
       - name: set up python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - run: pip install twine
 
