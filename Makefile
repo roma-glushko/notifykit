@@ -29,12 +29,12 @@ lib-release: ## Build an optimized version of the .so module
 	@maturin build -r
 
 lint: ## Lint all Python source code without changes
-	@pdm run ruff $(SOURCE)
+	@pdm run ruff check $(SOURCE)
 	@pdm run ruff format $(SOURCE) --diff
 	@pdm run mypy --pretty $(SOURCE)
 
 lint-fix: ## Lint all source code
-	@pdm run ruff --fix $(SOURCE)
+	@pdm run ruff check --fix $(SOURCE)
 	@pdm run ruff format $(SOURCE)
 	@pdm run mypy --pretty $(SOURCE)
 

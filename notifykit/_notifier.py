@@ -13,33 +13,25 @@ logger = logging.getLogger(__name__)
 
 
 class AnyEvent(Protocol):
-    def is_set(self) -> bool:
-        ...
+    def is_set(self) -> bool: ...
 
-    def set(self) -> None:
-        ...
+    def set(self) -> None: ...
 
 
 class NotifierT(Protocol):
-    def watch(
+    async def watch(
         self, paths: Sequence[PathLike[str]], recursive: bool = True, ignore_permission_errors: bool = False
-    ) -> None:
-        ...
+    ) -> None: ...
 
-    def unwatch(self, paths: Sequence[PathLike[str]]) -> None:
-        ...
+    async def unwatch(self, paths: Sequence[PathLike[str]]) -> None: ...
 
-    def __aiter__(self) -> "Notifier":
-        ...
+    def __aiter__(self) -> "Notifier": ...
 
-    def __iter__(self) -> "Notifier":
-        ...
+    def __iter__(self) -> "Notifier": ...
 
-    def __next__(self) -> List[Event]:
-        ...
+    def __next__(self) -> List[Event]: ...
 
-    async def __anext__(self) -> List[Event]:
-        ...
+    async def __anext__(self) -> List[Event]: ...
 
 
 class Notifier:
@@ -63,16 +55,21 @@ class Notifier:
         self._filter = filter
         self._stop_event = stop_event if stop_event else anyio.Event()
 
-    def watch(
+    async def watch(
         self,
         paths: Sequence[PathLike[str]],
         recursive: bool = True,
         ignore_permission_errors: bool = False,
     ) -> None:
-        self._watcher.watch([str(path) for path in paths], recursive, ignore_permission_errors)
+        await anyio.to_thread.run_sync(
+            self._watcher.watch,
+            [str(path) for path in paths],
+            recursive,
+            ignore_permission_errors,
+        )
 
-    def unwatch(self, paths: Sequence[str]) -> None:
-        self._watcher.unwatch(list(paths))
+    async def unwatch(self, paths: Sequence[str]) -> None:
+        await anyio.to_thread.run_sync(self._watcher.unwatch, list(paths))
 
     def get(self) -> Optional[List[Event]]:
         return self._watcher.get(self._tick_ms, self._stop_event)
@@ -100,7 +97,7 @@ class Notifier:
 
         return events
 
-    async def __anext__(self) -> List[Event]:
+    async def __anext__(self) -> List[Event]:  # type: ignore[return]
         CancelledError = anyio.get_cancelled_exc_class()
 
         async with anyio.create_task_group() as tg:

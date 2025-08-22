@@ -13,17 +13,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: install rust
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: 1.78.0
           override: true
           components: rustfmt, clippy
 
@@ -31,7 +31,7 @@ jobs:
         uses: Swatinem/rust-cache@v1
 
       - name: Setup PDM
-        uses: pdm-project/setup-pdm@v3
+        uses: pdm-project/setup-pdm@v4
 
       # You are now able to use PDM in your workflow
       - name: Install dependencies
@@ -71,7 +71,7 @@ jobs:
 #      OS: ${{ matrix.os }}
 #
 #    steps:
-#      - uses: actions/checkout@v3
+#      - uses: actions/checkout@v4
 #
 #      - name: set up python
 #        uses: actions/setup-python@v4
@@ -89,7 +89,7 @@ jobs:
 #        uses: Swatinem/rust-cache@v1
 #
 #      - name: Setup PDM
-#        uses: pdm-project/setup-pdm@v3
+#        uses: pdm-project/setup-pdm@v4
 #
 #      # You are now able to use PDM in your workflow
 #      - name: Install dependencies
@@ -120,10 +120,10 @@ jobs:
           - target: aarch64
             manylinux: musllinux_1_1
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Build CPython Wheels
         uses: PyO3/maturin-action@v1
@@ -145,7 +145,7 @@ jobs:
       - run: ls -lah dist/
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: dist
@@ -158,10 +158,10 @@ jobs:
       matrix:
         target: [ x86_64, aarch64 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Build CPython Wheels
         uses: PyO3/maturin-action@v1
@@ -180,7 +180,7 @@ jobs:
       - run: ls -lah dist/
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: dist
@@ -193,10 +193,10 @@ jobs:
       matrix:
         target: [x64, x86]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           architecture: ${{ matrix.target }}
 
       - name: Build wheels
@@ -209,7 +209,7 @@ jobs:
       - run: dir dist/
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: dist
@@ -218,14 +218,14 @@ jobs:
     name: sdist
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
           command: sdist
           args: --out dist
       - name: Upload sdist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: dist
@@ -235,7 +235,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: get dist artifacts
         uses: actions/download-artifact@v3
@@ -280,12 +280,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: set up python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - run: pip install twine
 
