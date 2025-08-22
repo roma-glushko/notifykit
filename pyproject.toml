@@ -16,7 +16,7 @@ dependencies = [
     "anyio>=3.0.0",
 ]
 
-requires-python = '>=3.8'
+requires-python = '>=3.8,<3.13'
 readme = "README.md"
 license = {text = "Apache 2.0"}
 
