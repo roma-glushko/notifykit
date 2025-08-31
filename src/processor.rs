@@ -2,8 +2,6 @@ use std::collections::{HashMap, VecDeque};
 use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 use std::time::Duration;
-
-#[cfg(not(test))]
 use std::time::Instant;
 
 use crate::file_cache::FileIdCache;

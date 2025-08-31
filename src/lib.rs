@@ -6,6 +6,7 @@ mod watcher;
 extern crate notify;
 extern crate pyo3;
 
+use tokio::runtime::Builder;
 use crate::watcher::{Watcher, WatcherError};
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
@@ -88,6 +89,10 @@ impl WatcherWrapper {
 
 #[pymodule]
 fn _notifykit_lib(py: Python, m: &PyModule) -> PyResult<()> {
+    let mut builder = Builder::new_multi_thread();
+    builder.enable_all();
+    pyo3_asyncio::tokio::init(builder);
+
     let mut version = env!("CARGO_PKG_VERSION").to_string();
     version = version.replace("-alpha", "a").replace("-beta", "b");
 
