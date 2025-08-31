@@ -8,6 +8,7 @@ pub(crate) mod delete;
 pub(crate) mod modify;
 pub(crate) mod rename;
 
+#[derive(Debug, Clone)]
 pub enum EventType {
     Access(access::AccessEvent),
     Create(create::CreateEvent),
