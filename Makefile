@@ -9,6 +9,10 @@ help:
 	@echo "============="
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
+tools: ## Install development tools
+	@echo "Installing development tools..."
+	@uv tool install maturin
+
 lib-lint:  ## Lint the library codebase without changes (Rust)
 	@cargo fmt --version
 	@cargo fmt --all -- --check
@@ -21,12 +25,11 @@ lib-lint-fix:  ## Lint the library codebase (Rust)
 	@cargo clippy --version
 	@cargo clippy -- -D warnings
 
-lib-dev:  ## Build the library codebase as importable .so module
-	@maturin develop
-
+lib-dev: tools  ## Build the library codebase as importable .so module
+	@uvx maturin develop
 
 lib-release: ## Build an optimized version of the .so module
-	@maturin build -r
+	@uvx maturin build -r
 
 lint: ## Lint all Python source code without changes
 	@pdm run ruff check $(SOURCE)

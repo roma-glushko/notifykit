@@ -40,16 +40,16 @@ impl WatcherWrapper {
         })
     }
 
-    pub fn watch(
-        &mut self,
-        py: Python<'_>,
+    pub fn watch<'py>(
+        &self,
+        py: Python<'py>,
         paths: Vec<String>,
         recursive: bool,
         ignore_permission_errors: bool,
-    ) -> PyResult<()> {
+    ) -> PyResult<&'py PyAny> {
         let watcher = Arc::clone(&self.inner);
 
-        pyo3_asyncio::tokio::run(py, async move {
+        pyo3_asyncio::tokio::future_into_py(py, async move {
             tokio::task::spawn_blocking(move || {
                 let mut guard = watcher.lock().unwrap();
 
@@ -62,10 +62,10 @@ impl WatcherWrapper {
         })
     }
 
-    pub fn unwatch(&mut self, py: Python<'_>, paths: Vec<String>) -> PyResult<()> {
+    pub fn unwatch<'py>(&mut self, py: Python<'py>, paths: Vec<String>) -> PyResult<&'py PyAny> {
         let watcher = self.inner.clone();
 
-        pyo3_asyncio::tokio::run(py, async move {
+        pyo3_asyncio::tokio::future_into_py(py, async move {
             tokio::task::spawn_blocking(move || {
                 let mut guard = watcher.lock().unwrap();
 
@@ -156,6 +156,8 @@ impl EventBatchIter {
 
 #[pymodule]
 fn _notifykit_lib(py: Python, m: &PyModule) -> PyResult<()> {
+    pyo3::prepare_freethreaded_python();
+
     let mut builder = Builder::new_multi_thread();
     builder.enable_all();
     pyo3_asyncio::tokio::init(builder);

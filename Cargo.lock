@@ -354,7 +354,7 @@ dependencies = [
 
 [[package]]
 name = "notifykit_lib"
-version = "0.0.9-alpha.1"
+version = "0.0.10-alpha.1"
 dependencies = [
  "crossbeam-channel",
  "crossbeam-utils",
