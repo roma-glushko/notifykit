@@ -6,10 +6,14 @@ mod watcher;
 extern crate notify;
 extern crate pyo3;
 
+use crate::events::EventType;
 use crate::watcher::{Watcher, WatcherError};
-use pyo3::exceptions::PyTypeError;
+use pyo3::exceptions::{PyOSError, PyStopAsyncIteration};
 use pyo3::prelude::*;
-use std::time::Duration;
+use pyo3::pyasync::IterANextOutput;
+use std::sync::{Arc, Mutex};
+use tokio::runtime::Builder;
+use tokio::sync::broadcast;
 
 use crate::events::access::{AccessEvent, AccessMode, AccessType};
 use crate::events::base::ObjectType;
@@ -22,72 +26,139 @@ use crate::events::rename::RenameEvent;
 
 #[pyclass]
 pub struct WatcherWrapper {
-    watcher: Watcher,
+    inner: Arc<Mutex<Watcher>>,
 }
 
 #[pymethods]
 impl WatcherWrapper {
     #[new]
     fn __init__(debounce_ms: u64, debug: bool) -> PyResult<Self> {
-        let watcher = Watcher::new(debounce_ms, debug);
+        let inner = Watcher::new(debounce_ms, debug).map_err(|e| PyOSError::new_err(e.to_string()))?;
 
-        Ok(WatcherWrapper { watcher: watcher? })
+        Ok(WatcherWrapper {
+            inner: Arc::new(Mutex::new(inner)),
+        })
     }
 
-    pub fn get(&self, py: Python, tick_ms: u64, stop_event: PyObject) -> PyResult<Option<Vec<PyObject>>> {
-        let is_stopping: Option<&PyAny> = match stop_event.is_none(py) {
-            true => None,
-            false => {
-                let event: &PyAny = stop_event.extract(py)?;
-                let func: &PyAny = event.getattr("is_set")?.extract()?;
-                if !func.is_callable() {
-                    return Err(PyTypeError::new_err("'stop_event.is_set' must be callable"));
-                }
-                Some(func)
-            }
+    pub fn watch<'py>(
+        &self,
+        py: Python<'py>,
+        paths: Vec<String>,
+        recursive: bool,
+        ignore_permission_errors: bool,
+    ) -> PyResult<&'py PyAny> {
+        let watcher = Arc::clone(&self.inner);
+
+        pyo3_asyncio::tokio::future_into_py(py, async move {
+            tokio::task::spawn_blocking(move || {
+                let mut guard = watcher.lock().unwrap();
+
+                guard.watch(&paths, recursive, ignore_permission_errors)
+            })
+            .await
+            .ok();
+
+            Ok(())
+        })
+    }
+
+    pub fn unwatch<'py>(&mut self, py: Python<'py>, paths: Vec<String>) -> PyResult<&'py PyAny> {
+        let watcher = self.inner.clone();
+
+        pyo3_asyncio::tokio::future_into_py(py, async move {
+            tokio::task::spawn_blocking(move || {
+                let mut guard = watcher.lock().unwrap();
+
+                guard.unwatch(paths)
+            })
+            .await
+            .ok();
+
+            Ok(())
+        })
+    }
+
+    fn events(&self, tick_ms: u64) -> PyResult<EventBatchIter> {
+        let rx = {
+            let mut g = self.inner.lock().unwrap();
+            g.start_drain(std::time::Duration::from_millis(tick_ms));
+            g.subscribe()
         };
 
-        loop {
-            py.allow_threads(|| std::thread::sleep(Duration::from_millis(tick_ms)));
-            py.check_signals()?;
+        Ok(EventBatchIter::new(rx))
+    }
 
-            if let Some(is_set) = is_stopping {
-                if is_set.call0()?.is_true()? {
-                    return Ok(None);
-                }
-            }
-
-            let events = self.watcher.get();
-
-            if events.is_empty() {
-                continue;
-            }
-
-            let mut py_events = Vec::with_capacity(events.len());
-
-            for event in events.iter() {
-                py_events.push(event.to_object(py))
-            }
-
-            return Ok(Some(py_events));
+    pub fn stop(&self) {
+        if let Ok(mut g) = self.inner.lock() {
+            g.stop();
         }
     }
 
-    pub fn watch(&mut self, paths: Vec<String>, recursive: bool, ignore_permission_errors: bool) -> PyResult<()> {
-        self.watcher.watch(paths, recursive, ignore_permission_errors)
-    }
-
-    pub fn unwatch(&mut self, paths: Vec<String>) -> PyResult<()> {
-        self.watcher.unwatch(paths)
-    }
-
     pub fn __repr__(&mut self) -> PyResult<String> {
-        Ok(self.watcher.repr())
+        let mut watcher = self.inner.lock().unwrap();
+
+        Ok(watcher.repr())
+    }
+}
+
+#[pyclass]
+struct EventBatchIter {
+    rx: Arc<tokio::sync::Mutex<broadcast::Receiver<Vec<EventType>>>>,
+}
+
+impl EventBatchIter {
+    fn new(rx: broadcast::Receiver<Vec<EventType>>) -> Self {
+        Self {
+            rx: Arc::new(tokio::sync::Mutex::new(rx)),
+        }
+    }
+}
+
+#[pymethods]
+impl EventBatchIter {
+    fn __aiter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __anext__(&self, py: Python) -> PyResult<IterANextOutput<PyObject, PyObject>> {
+        use pyo3::types::PyList;
+        use pyo3::IntoPy;
+
+        let rx = Arc::clone(&self.rx);
+
+        let fut = pyo3_asyncio::tokio::future_into_py::<_, PyObject>(py, async move {
+            loop {
+                let mut guard = rx.lock().await;
+                match guard.recv().await {
+                    Ok(batch) => {
+                        // Build the Python list under the GIL and return a PyObject
+                        return Python::with_gil(|py| {
+                            let objs: Vec<PyObject> = batch.iter().map(|e| e.to_object(py)).collect();
+                            Ok(PyList::new(py, objs).into_py(py))
+                        });
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
+                        // Skip lost batches and keep waiting
+                        continue;
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                        // Signal end of async iteration
+                        return Err(PyErr::new::<PyStopAsyncIteration, _>("event stream closed"));
+                    }
+                }
+            }
+        })?;
+
+        Ok(IterANextOutput::Yield(fut.into_py(py)))
     }
 }
 
 #[pymodule]
 fn _notifykit_lib(py: Python, m: &PyModule) -> PyResult<()> {
+    let mut builder = Builder::new_multi_thread();
+    builder.enable_all();
+    pyo3_asyncio::tokio::init(builder);
+
     let mut version = env!("CARGO_PKG_VERSION").to_string();
     version = version.replace("-alpha", "a").replace("-beta", "b");
 
@@ -96,6 +167,7 @@ fn _notifykit_lib(py: Python, m: &PyModule) -> PyResult<()> {
     m.add("WatcherError", py.get_type::<WatcherError>())?;
 
     m.add_class::<WatcherWrapper>()?;
+    m.add_class::<EventBatchIter>()?;
 
     // Create & Delete Events
     m.add_class::<ObjectType>()?;

@@ -73,7 +73,7 @@ impl FileCache {
 
     fn dir_scan_depth(is_recursive: bool) -> usize {
         if is_recursive {
-            return usize::max_value();
+            return usize::MAX;
         }
 
         1

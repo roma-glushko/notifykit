@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
 ## Features
 
-- Simple Modern Pythonic API, both sync and async
+- Simple Modern Pythonic API
 - High Performance
 - Cross-platform (support not only Linux, but also MacOS)
 - Easy to mock in tests

@@ -2,8 +2,6 @@ use std::collections::{HashMap, VecDeque};
 use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 use std::time::Duration;
-
-#[cfg(not(test))]
 use std::time::Instant;
 
 use crate::file_cache::FileIdCache;
@@ -70,7 +68,7 @@ struct FileEventQueue {
 
 impl FileEventQueue {
     fn was_created(&self) -> bool {
-        self.events.front().map_or(false, |event| {
+        self.events.front().is_some_and(|event| {
             matches!(
                 event.kind,
                 EventKind::Create(_) | EventKind::Modify(ModifyKind::Name(RenameMode::To))
@@ -79,7 +77,7 @@ impl FileEventQueue {
     }
 
     fn was_removed(&self) -> bool {
-        self.events.front().map_or(false, |event| {
+        self.events.front().is_some_and(|event| {
             matches!(
                 event.kind,
                 EventKind::Remove(_) | EventKind::Modify(ModifyKind::Name(RenameMode::From))

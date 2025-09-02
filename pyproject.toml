@@ -1,6 +1,6 @@
 [project]
 name = "notifykit"
-version = "0.0.9a1"
+version = "0.1.0a1"
 description = "A modern efficient Python toolkit for building applications that need to watch filesystem changes"
 authors = [
     {name = "Roman Glushko", email = "roman.glushko.m@gmail.com"},
@@ -10,10 +10,6 @@ classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
-]
-
-dependencies = [
-    "anyio>=4.10.0",
 ]
 
 requires-python = '>=3.9'
@@ -34,6 +30,8 @@ bindings = 'pyo3'
 
 [tool.ruff]
 line-length = 120
+
+[lint]
 extend-select = ['Q']
 flake8-quotes = {inline-quotes = 'double', multiline-quotes = 'double'}
 
