@@ -215,7 +215,7 @@ fn map_notify_error(notify_error: notify::Error) -> PyErr {
 
 fn create_event(event: &RawEvent) -> Option<EventType> {
     let paths = &event.paths;
-    let file_path: PathBuf = paths.first().unwrap().to_owned();
+    let file_path: PathBuf = paths.first()?.to_owned();
 
     Some(match event.kind {
         EventKind::Access(access_kind) => EventType::Access(from_access_kind(file_path, access_kind)),
