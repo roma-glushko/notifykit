@@ -156,8 +156,6 @@ impl EventBatchIter {
 
 #[pymodule]
 fn _notifykit_lib(py: Python, m: &PyModule) -> PyResult<()> {
-    pyo3::prepare_freethreaded_python();
-
     let mut builder = Builder::new_multi_thread();
     builder.enable_all();
     pyo3_asyncio::tokio::init(builder);
