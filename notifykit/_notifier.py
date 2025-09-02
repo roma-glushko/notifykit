@@ -1,5 +1,4 @@
 from os import PathLike
-import anyio
 import logging
 from typing import Sequence, Protocol, Optional, List
 from notifykit._notifykit_lib import (
@@ -62,14 +61,10 @@ class Notifier:
         recursive: bool = True,
         ignore_permission_errors: bool = False,
     ) -> None:
-        await self._watcher.watch(
-            [str(path) for path in paths],
-            recursive,
-            ignore_permission_errors
-        )
+        await self._watcher.watch([str(path) for path in paths], recursive, ignore_permission_errors)
 
     async def unwatch(self, paths: Sequence[str]) -> None:
-       await self._watcher.unwatch(list(paths))
+        await self._watcher.unwatch(list(paths))
 
     def __aiter__(self) -> "Notifier":
         # start/attach the async iterator from Rust; safe to do before watch()

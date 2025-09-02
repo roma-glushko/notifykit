@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import List, Optional, Any
+from typing import List, Optional
 from notifykit._typing import Event
 
 """
