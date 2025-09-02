@@ -120,7 +120,7 @@ impl EventBatchIter {
         slf
     }
 
-    fn __anext__<'py>(&self, py: Python<'py>) -> PyResult<IterANextOutput<PyObject, PyObject>> {
+    fn __anext__(&self, py: Python) -> PyResult<IterANextOutput<PyObject, PyObject>> {
         use pyo3::types::PyList;
         use pyo3::IntoPy;
 

@@ -77,7 +77,7 @@ impl FileEventQueue {
     }
 
     fn was_removed(&self) -> bool {
-        self.events.front().map_or(false, |event| {
+        self.events.front().is_some_and(|event| {
             matches!(
                 event.kind,
                 EventKind::Remove(_) | EventKind::Modify(ModifyKind::Name(RenameMode::From))
