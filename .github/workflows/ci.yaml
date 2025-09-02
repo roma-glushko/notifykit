@@ -33,7 +33,7 @@ jobs:
 
       # You are now able to use PDM in your workflow
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --locked --all-extras --dev
 
       - name: Lint Rust codebase
         run: make lib-lint
