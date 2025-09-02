@@ -134,7 +134,7 @@ impl Watcher {
         if let Some(tx) = self.stop_tx.take() {
             let _ = tx.send(());
         }
-        
+
         let (new_tx, _rx) = broadcast::channel::<Vec<EventType>>(1024);
         let _old = std::mem::replace(&mut self.tx, new_tx);
     }
@@ -153,6 +153,7 @@ impl Watcher {
 
         thread::spawn(move || {
             let rt = tokio::runtime::Runtime::new().expect("tokio rt");
+
             rt.block_on(async move {
                 let mut ticker = time::interval(debounce_delay);
 
