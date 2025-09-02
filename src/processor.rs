@@ -68,7 +68,7 @@ struct FileEventQueue {
 
 impl FileEventQueue {
     fn was_created(&self) -> bool {
-        self.events.front().map_or(false, |event| {
+        self.events.front().is_some_and(|event| {
             matches!(
                 event.kind,
                 EventKind::Create(_) | EventKind::Modify(ModifyKind::Name(RenameMode::To))
