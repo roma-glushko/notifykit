@@ -30,12 +30,12 @@ jobs:
       - name: cache rust
         uses: Swatinem/rust-cache@v1
 
-      - name: Setup PDM
-        uses: pdm-project/setup-pdm@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
 
       # You are now able to use PDM in your workflow
       - name: Install dependencies
-        run: pdm install
+        run: uv sync
 
       - name: Lint Rust codebase
         run: make lib-lint
