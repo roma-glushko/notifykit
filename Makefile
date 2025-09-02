@@ -32,14 +32,14 @@ lib-release: ## Build an optimized version of the .so module
 	@uvx maturin build -r
 
 lint: ## Lint all Python source code without changes
-	@pdm run ruff check $(SOURCE)
-	@pdm run ruff format $(SOURCE) --diff
-	@pdm run mypy --pretty $(SOURCE)
+	@uv run ruff check $(SOURCE)
+	@uv run ruff format $(SOURCE) --diff
+	@uv run mypy --pretty $(SOURCE)
 
 lint-fix: ## Lint all source code
-	@pdm run ruff check --fix $(SOURCE)
-	@pdm run ruff format $(SOURCE)
-	@pdm run mypy --pretty $(SOURCE)
+	@uv run ruff check --fix $(SOURCE)
+	@uv run ruff format $(SOURCE)
+	@uv run mypy --pretty $(SOURCE)
 
 docs-serve: ## Run documentation locally
 	@pdm run mkdocs serve -a localhost:7756

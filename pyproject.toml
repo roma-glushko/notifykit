@@ -12,10 +12,6 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 
-dependencies = [
-    "anyio>=4.10.0",
-]
-
 requires-python = '>=3.9'
 readme = "README.md"
 
