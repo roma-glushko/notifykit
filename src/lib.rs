@@ -126,7 +126,6 @@ impl EventBatchIter {
 
         let rx = Arc::clone(&self.rx);
 
-        // Tell pyo3-asyncio what the future returns: PyObject
         let fut = pyo3_asyncio::tokio::future_into_py::<_, PyObject>(py, async move {
             loop {
                 let mut guard = rx.lock().await;
