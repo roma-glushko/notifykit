@@ -3,6 +3,7 @@ import logging
 from typing import Sequence, Protocol, Optional, List
 from notifykit._notifykit_lib import (
     WatcherWrapper,
+    EventBatchIter,
 )
 
 from notifykit._typing import Event
@@ -53,7 +54,7 @@ class Notifier:
         self._watcher = WatcherWrapper(debounce_ms, debug)
         self._filter = filter
 
-        self._aiter = None  # created lazily from Rust iterator
+        self._aiter: Optional[EventBatchIter] = None  # created lazily from Rust iterator
 
     async def watch(
         self,
