@@ -134,6 +134,9 @@ impl Watcher {
         if let Some(tx) = self.stop_tx.take() {
             let _ = tx.send(());
         }
+        
+        let (new_tx, _rx) = broadcast::channel::<Vec<EventType>>(1024);
+        let _old = std::mem::replace(&mut self.tx, new_tx);
     }
 
     pub fn start_drain(&mut self, debounce_delay: Duration) {
