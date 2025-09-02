@@ -15,10 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-
       - name: install rust
         uses: actions-rs/toolchain@v1
         with:
@@ -32,6 +28,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
 
       # You are now able to use PDM in your workflow
       - name: Install dependencies
