@@ -18,7 +18,7 @@ from notifykit import CommonFilter, ModifyDataEvent, DataType, RenameEvent
 def test__event_filter__ignore_paths(path: Path, filtered: bool) -> None:
     filter = CommonFilter()
 
-    assert filter(ModifyDataEvent(path=path, data_type=DataType.CONTENT)) == filtered
+    assert filter(ModifyDataEvent(path=str(path), data_type=DataType.CONTENT)) == filtered
 
 
 @pytest.mark.parametrize(
@@ -32,4 +32,4 @@ def test__event_filter__ignore_paths(path: Path, filtered: bool) -> None:
 def test__event_filter__ignore_renames(old_path: Path, new_path: Path, filtered: bool) -> None:
     filter = CommonFilter()
 
-    assert filter(RenameEvent(old_path=old_path, new_path=new_path)) == filtered
+    assert filter(RenameEvent(old_path=str(old_path), new_path=str(new_path))) == filtered

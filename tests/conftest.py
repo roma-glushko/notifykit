@@ -2,15 +2,15 @@ import asyncio
 from contextlib import asynccontextmanager
 
 import async_timeout
-from typing import AsyncGenerator, Self
+from typing import AsyncGenerator, Self, Any
 
 from notifykit import NotifierT, Event
 
 
 class EventCollector:
-    def __init__(self):
+    def __init__(self) -> None:
         self._events: list[Event] = []
-        self._notifier_task: asyncio.Task | None = None
+        self._notifier_task: asyncio.Task[Any] | None = None
 
         self._waiters: set[tuple[int, asyncio.Event]] = set()
 
