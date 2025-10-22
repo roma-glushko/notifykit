@@ -1,6 +1,6 @@
 from os import PathLike
 import logging
-from typing import Sequence, Protocol, Optional, List
+from typing import Sequence, Protocol, Optional, List, Self
 from notifykit._notifykit_lib import (
     WatcherWrapper,
     EventBatchIter,
@@ -25,13 +25,11 @@ class NotifierT(Protocol):
 
     async def unwatch(self, paths: Sequence[PathLike[str]]) -> None: ...
 
-    def __aiter__(self) -> "Notifier": ...
-
-    def __iter__(self) -> "Notifier": ...
-
-    def __next__(self) -> List[Event]: ...
+    def __aiter__(self) -> Self: ...
 
     async def __anext__(self) -> List[Event]: ...
+
+    def stop(self) -> None: ...
 
 
 class Notifier:
@@ -64,8 +62,8 @@ class Notifier:
     ) -> None:
         await self._watcher.watch([str(path) for path in paths], recursive, ignore_permission_errors)
 
-    async def unwatch(self, paths: Sequence[str]) -> None:
-        await self._watcher.unwatch(list(paths))
+    async def unwatch(self, paths: Sequence[PathLike[str]]) -> None:
+        await self._watcher.unwatch([str(path) for path in paths])
 
     def __aiter__(self) -> "Notifier":
         # start/attach the async iterator from Rust; safe to do before watch()
