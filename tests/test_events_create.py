@@ -8,6 +8,7 @@ from tests.conftest import EventCollector
 
 async def test__events__create_file() -> None:
     files_to_create = 3
+    expected_events = files_to_create * 3 # each file triggers 3 events: Create, ModifyMetadata, ModifyData
     tmp_dir = Path(tempfile.mkdtemp())
 
     await asyncio.sleep(0.1)  # avoid catching directory creation event
@@ -26,6 +27,6 @@ async def test__events__create_file() -> None:
 
             expected_paths.append(str(file_path))
 
-        await c.wait_for_events(3, timeout=3)
+        await c.wait_for_events(expected_events, timeout=3)
 
-    assert len(collector.events) == files_to_create, collector.events
+    assert len(collector.events) == expected_events, collector.events
