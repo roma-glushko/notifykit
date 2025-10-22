@@ -33,6 +33,8 @@ class NotifierT(Protocol):
 
     async def __anext__(self) -> List[Event]: ...
 
+    def stop(self) -> None: ...
+
 
 class Notifier:
     """
