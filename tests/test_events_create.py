@@ -8,7 +8,7 @@ from tests.conftest import EventCollector
 
 async def test__events__create_file() -> None:
     files_to_create = 3
-    expected_events = files_to_create * 3 # each file triggers 3 events: Create, ModifyMetadata, ModifyData
+    expected_events = files_to_create * 3  # each file triggers 3 events: Create, ModifyMetadata, ModifyData
     tmp_dir = Path(tempfile.mkdtemp())
 
     await asyncio.sleep(0.1)  # avoid catching directory creation event
@@ -22,7 +22,7 @@ async def test__events__create_file() -> None:
         expected_paths = []
 
         for idx in range(files_to_create):
-            file_path = tmp_dir / f'lorem_{idx}.txt'
+            file_path = tmp_dir / f"lorem_{idx}.txt"
             file_path.write_text("new lorem ipsum")
 
             expected_paths.append(str(file_path))
