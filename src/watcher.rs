@@ -30,6 +30,7 @@ pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
 #[derive(Debug)]
 pub(crate) struct Watcher {
     debug: bool,
+    event_buffer_size: usize,
     inner: RecommendedWatcher,
     // file_cache: FileCache,
     processor: Arc<Mutex<BatchProcessor>>, // TODO: use the EventProcessor trait instead
@@ -39,7 +40,7 @@ pub(crate) struct Watcher {
 }
 
 impl Watcher {
-    pub fn new(buffering_time_ms: u64, debug: bool) -> Result<Self, notify::Error> {
+    pub fn new(buffering_time_ms: u64, event_buffer_size: usize, debug: bool) -> Result<Self, notify::Error> {
         // TODO: hide usage of file cache from Watcher
         // let file_cache = FileCache::new();
         // let file_cache_c = file_cache.clone();
@@ -48,7 +49,7 @@ impl Watcher {
         let processor = Arc::new(Mutex::new(BatchProcessor::new(buffering_duration)));
         let processor_c = processor.clone();
 
-        let (tx, _rx) = broadcast::channel::<Vec<EventType>>(1024); // TODO: make buffer size configurable
+        let (tx, _rx) = broadcast::channel::<Vec<EventType>>(event_buffer_size);
 
         let inner = RecommendedWatcher::new(
             move |e: Result<Event, notify::Error>| {
@@ -74,6 +75,7 @@ impl Watcher {
 
         Ok(Self {
             debug,
+            event_buffer_size,
             inner,
             processor,
             tx,
@@ -146,7 +148,7 @@ impl Watcher {
             handle.abort();
         }
 
-        let (new_tx, _rx) = broadcast::channel::<Vec<EventType>>(1024);
+        let (new_tx, _rx) = broadcast::channel::<Vec<EventType>>(self.event_buffer_size);
         let _old = std::mem::replace(&mut self.tx, new_tx);
     }
 
