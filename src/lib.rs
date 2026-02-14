@@ -145,8 +145,8 @@ impl EventBatchIter {
                             Ok(PyList::new(py, objs).into_py(py))
                         });
                     }
-                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
-                        // Skip lost batches and keep waiting
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                        eprintln!("notifykit: consumer too slow, {n} event batch(es) dropped");
                         continue;
                     }
                     Err(tokio::sync::broadcast::error::RecvError::Closed) => {
