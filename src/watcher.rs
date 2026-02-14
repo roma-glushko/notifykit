@@ -35,6 +35,7 @@ pub(crate) struct Watcher {
     processor: Arc<Mutex<BatchProcessor>>, // TODO: use the EventProcessor trait instead
     tx: broadcast::Sender<Vec<EventType>>,
     stop_tx: Option<oneshot::Sender<()>>,
+    drain_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl Watcher {
@@ -77,6 +78,7 @@ impl Watcher {
             processor,
             tx,
             stop_tx: None,
+            drain_handle: None,
         })
     }
 
@@ -140,6 +142,10 @@ impl Watcher {
             let _ = tx.send(());
         }
 
+        if let Some(handle) = self.drain_handle.take() {
+            handle.abort();
+        }
+
         let (new_tx, _rx) = broadcast::channel::<Vec<EventType>>(1024);
         let _old = std::mem::replace(&mut self.tx, new_tx);
     }
@@ -149,6 +155,10 @@ impl Watcher {
             let _ = tx.send(());
         }
 
+        if let Some(handle) = self.drain_handle.take() {
+            handle.abort();
+        }
+
         let (stop_tx, mut stop_rx) = oneshot::channel();
         self.stop_tx = Some(stop_tx);
 
@@ -156,7 +166,7 @@ impl Watcher {
         let tx = self.tx.clone();
         let debug = self.debug;
 
-        pyo3_asyncio::tokio::get_runtime().spawn(async move {
+        self.drain_handle = Some(pyo3_asyncio::tokio::get_runtime().spawn(async move {
             let mut ticker = time::interval(debounce_delay);
 
             loop {
@@ -186,7 +196,7 @@ impl Watcher {
                     }
                 }
             }
-        });
+        }));
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<Vec<EventType>> {
