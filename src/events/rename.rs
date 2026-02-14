@@ -13,7 +13,7 @@ pub struct RenameEvent {
 #[pymethods]
 impl RenameEvent {
     #[new]
-    pub fn new(new_path: PathBuf, old_path: PathBuf) -> Self {
+    pub fn new(old_path: PathBuf, new_path: PathBuf) -> Self {
         Self { old_path, new_path }
     }
 

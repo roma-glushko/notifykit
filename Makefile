@@ -25,11 +25,20 @@ lib-lint-fix:  ## Lint the library codebase (Rust)
 	@cargo clippy --version
 	@cargo clippy -- -D warnings
 
+build: ## Build the library
+	@uv build
+
 lib-dev: tools  ## Build the library codebase as importable .so module
 	@uvx maturin develop
 
 lib-release: ## Build an optimized version of the .so module
 	@uvx maturin build -r
+
+test: ## Run all tests
+	@uv run pytest $(TESTS)
+
+test-v: ## Run all tests (verbose)
+	@uv run pytest $(TESTS) -v
 
 lint: ## Lint all Python source code without changes
 	@uv run ruff check $(SOURCE)

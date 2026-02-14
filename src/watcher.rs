@@ -4,7 +4,6 @@ extern crate pyo3;
 use std::io::ErrorKind as IOErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::thread;
 use std::time::Duration;
 
 use crate::events::access::from_access_kind;
@@ -151,34 +150,30 @@ impl Watcher {
         let tx = self.tx.clone();
         let debug = self.debug;
 
-        thread::spawn(move || {
-            let rt = tokio::runtime::Runtime::new().expect("tokio rt");
+        pyo3_asyncio::tokio::get_runtime().spawn(async move {
+            let mut ticker = time::interval(debounce_delay);
 
-            rt.block_on(async move {
-                let mut ticker = time::interval(debounce_delay);
+            loop {
+                tokio::select! {
+                    _ = &mut stop_rx => break,
+                    _ = ticker.tick() => {
+                        let (raw, errs) = {
+                            let mut p = proc.lock().unwrap();
+                            (p.get_events(), p.get_errors())
+                        };
+                        if debug && !raw.is_empty() { println!("processed: {:?}", raw); }
+                        if !errs.is_empty() { eprintln!("errors: {:?}", errs); }
+                        if raw.is_empty() { continue; }
 
-                loop {
-                    tokio::select! {
-                        _ = &mut stop_rx => break,
-                        _ = ticker.tick() => {
-                            let (raw, errs) = {
-                                let mut p = proc.lock().unwrap();
-                                (p.get_events(), p.get_errors())
-                            };
-                            if debug && !raw.is_empty() { println!("processed: {:?}", raw); }
-                            if !errs.is_empty() { eprintln!("errors: {:?}", errs); }
-                            if raw.is_empty() { continue; }
-
-                            let mut batch = Vec::with_capacity(raw.len());
-                            for r in raw {
-                                if let Some(ev) = create_event(&r) { batch.push(ev); }
-                            }
-
-                            if !batch.is_empty() { let _ = tx.send(batch); } // drop on overflow
+                        let mut batch = Vec::with_capacity(raw.len());
+                        for r in raw {
+                            if let Some(ev) = create_event(&r) { batch.push(ev); }
                         }
+
+                        if !batch.is_empty() { let _ = tx.send(batch); }
                     }
                 }
-            });
+            }
         });
     }
 

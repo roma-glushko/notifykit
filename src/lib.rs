@@ -50,15 +50,17 @@ impl WatcherWrapper {
         let watcher = Arc::clone(&self.inner);
 
         pyo3_asyncio::tokio::future_into_py(py, async move {
-            tokio::task::spawn_blocking(move || {
+            let res = tokio::task::spawn_blocking(move || {
                 let mut guard = watcher.lock().unwrap();
 
                 guard.watch(&paths, recursive, ignore_permission_errors)
             })
-            .await
-            .ok();
+            .await;
 
-            Ok(())
+            match res {
+                Ok(inner) => inner,
+                Err(join_err) => Err(PyOSError::new_err(join_err.to_string())),
+            }
         })
     }
 
@@ -66,15 +68,17 @@ impl WatcherWrapper {
         let watcher = self.inner.clone();
 
         pyo3_asyncio::tokio::future_into_py(py, async move {
-            tokio::task::spawn_blocking(move || {
+            let res = tokio::task::spawn_blocking(move || {
                 let mut guard = watcher.lock().unwrap();
 
                 guard.unwatch(paths)
             })
-            .await
-            .ok();
+            .await;
 
-            Ok(())
+            match res {
+                Ok(inner) => inner,
+                Err(join_err) => Err(PyOSError::new_err(join_err.to_string())),
+            }
         })
     }
 

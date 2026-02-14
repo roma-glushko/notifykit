@@ -8,10 +8,11 @@ from notifykit._notifykit_lib import (
     ModifyDataEvent,
     ModifyMetadataEvent,
     ModifyOtherEvent,
+    ModifyUnknownEvent,
     DeleteEvent,
     RenameEvent,
 )
 
 Event: TypeAlias = Union[
-    AccessEvent, CreateEvent, ModifyDataEvent, ModifyMetadataEvent, ModifyOtherEvent, DeleteEvent, RenameEvent
+    AccessEvent, CreateEvent, ModifyDataEvent, ModifyMetadataEvent, ModifyOtherEvent, ModifyUnknownEvent, DeleteEvent, RenameEvent
 ]
