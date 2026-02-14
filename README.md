@@ -15,20 +15,18 @@
 ```bash
 pip install notifykit
 # or
-poetry add notifykit
-# or 
-pdm add notifykit
+uv add notifykit
 ```
 
 notifykit is available for:
 
-CPython 3.8-3.12 on the following platforms:
+CPython 3.9+ on the following platforms:
 
 - **Linux**: x86_64, aarch64, x86, armv7, s390x, ppc64le, musl-x86_64, musl-aarch64
 - **MacOS**: x86_64 & arm64
 - **Windows**: x64 & x86
 
-PyPY 3.8-3.10 on the following platforms:
+PyPy 3.9+ on the following platforms:
 
 - **Linux**: x86_64 & aarch64
 - **MacOS**: x86_64
@@ -37,35 +35,38 @@ PyPY 3.8-3.10 on the following platforms:
 
 ```python
 import asyncio
-import os
 from pathlib import Path
 
-from notifykit import Notifier
+from notifykit import Notifier, CommonFilter
 
 
 async def watch(watched_dir: Path) -> None:
-    notifier = Notifier(debounce_ms=200, debug=True)
+    notifier = Notifier(
+        debounce_ms=200,
+        filter=CommonFilter(),
+    )
     await notifier.watch([watched_dir])
 
-    async for event in notifier:
+    async for events in notifier:
         # process your events
-        print(event)
+        print(events)
 
 
 if __name__ == "__main__":
     watched_dir = Path("./watched_dir")
-    os.makedirs(watched_dir, exist_ok=True)
+    watched_dir.mkdir(exist_ok=True)
 
     asyncio.run(watch(watched_dir))
 ```
 
 ## Features
 
-- Simple Modern Pythonic API
+- Simple Modern Pythonic API (async)
 - High Performance
-- Cross-platform (support not only Linux, but also MacOS)
+- Cross-platform (Linux, MacOS, Windows)
+- Built-in event filtering (`CommonFilter`, custom `EventFilter` subclasses)
 - Easy to mock in tests
-- Makes common cases easy and advance cases possible
+- Makes common cases easy and advanced cases possible
 
 ## Sources of Inspiration
 
