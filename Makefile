@@ -28,6 +28,12 @@ lib-lint-fix:  ## Lint the library codebase (Rust)
 build: ## Build the library
 	@uv build
 
+build-linux: ## Build the library for Linux (x86_64, abi3 wheel)
+	@docker run --rm \
+       -v "$(PWD)":/io \
+       ghcr.io/pyo3/maturin:latest \
+       build --release --out dist
+
 lib-dev: tools  ## Build the library codebase as importable .so module
 	@uvx maturin develop
 

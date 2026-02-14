@@ -51,7 +51,13 @@ impl Watcher {
 
         let inner = RecommendedWatcher::new(
             move |e: Result<Event, notify::Error>| {
-                let mut event_processor = processor_c.lock().unwrap();
+                let mut event_processor = match processor_c.lock() {
+                    Ok(guard) => guard,
+                    Err(e) => {
+                        eprintln!("notifykit: event processor lock poisoned, dropping event: {e}");
+                        return;
+                    }
+                };
 
                 if debug {
                     println!("raw event: {:?}", e);
@@ -158,7 +164,13 @@ impl Watcher {
                     _ = &mut stop_rx => break,
                     _ = ticker.tick() => {
                         let (raw, errs) = {
-                            let mut p = proc.lock().unwrap();
+                            let mut p = match proc.lock() {
+                                Ok(guard) => guard,
+                                Err(e) => {
+                                    eprintln!("notifykit: event processor lock poisoned, skipping drain tick: {e}");
+                                    continue;
+                                }
+                            };
                             (p.get_events(), p.get_errors())
                         };
                         if debug && !raw.is_empty() { println!("processed: {:?}", raw); }
