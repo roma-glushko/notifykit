@@ -33,7 +33,8 @@ pub struct WatcherWrapper {
 impl WatcherWrapper {
     #[new]
     fn __init__(debounce_ms: u64, event_buffer_size: usize, debug: bool) -> PyResult<Self> {
-        let inner = Watcher::new(debounce_ms, event_buffer_size, debug).map_err(|e| PyOSError::new_err(e.to_string()))?;
+        let inner =
+            Watcher::new(debounce_ms, event_buffer_size, debug).map_err(|e| PyOSError::new_err(e.to_string()))?;
 
         Ok(WatcherWrapper {
             inner: Arc::new(Mutex::new(inner)),
@@ -51,8 +52,7 @@ impl WatcherWrapper {
 
         pyo3_asyncio::tokio::future_into_py(py, async move {
             let res = tokio::task::spawn_blocking(move || {
-                let mut guard = watcher.lock()
-                    .map_err(|e| PyOSError::new_err(e.to_string()))?;
+                let mut guard = watcher.lock().map_err(|e| PyOSError::new_err(e.to_string()))?;
 
                 guard.watch(&paths, recursive, ignore_permission_errors)
             })
@@ -70,8 +70,7 @@ impl WatcherWrapper {
 
         pyo3_asyncio::tokio::future_into_py(py, async move {
             let res = tokio::task::spawn_blocking(move || {
-                let mut guard = watcher.lock()
-                    .map_err(|e| PyOSError::new_err(e.to_string()))?;
+                let mut guard = watcher.lock().map_err(|e| PyOSError::new_err(e.to_string()))?;
 
                 guard.unwatch(paths)
             })
@@ -86,8 +85,7 @@ impl WatcherWrapper {
 
     fn events(&self, tick_ms: u64) -> PyResult<EventBatchIter> {
         let rx = {
-            let mut g = self.inner.lock()
-                .map_err(|e| PyOSError::new_err(e.to_string()))?;
+            let mut g = self.inner.lock().map_err(|e| PyOSError::new_err(e.to_string()))?;
             g.start_drain(std::time::Duration::from_millis(tick_ms));
             g.subscribe()
         };
@@ -102,8 +100,7 @@ impl WatcherWrapper {
     }
 
     pub fn __repr__(&mut self) -> PyResult<String> {
-        let mut watcher = self.inner.lock()
-            .map_err(|e| PyOSError::new_err(e.to_string()))?;
+        let mut watcher = self.inner.lock().map_err(|e| PyOSError::new_err(e.to_string()))?;
 
         Ok(watcher.repr())
     }
