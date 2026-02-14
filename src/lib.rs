@@ -1,3 +1,6 @@
+// pyo3 0.20 #[pymethods] macro triggers this lint on Rust 1.82+; fixed in pyo3 0.21
+#![allow(non_local_definitions)]
+
 mod events;
 mod file_cache;
 mod processor;
