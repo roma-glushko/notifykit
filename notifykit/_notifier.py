@@ -44,7 +44,16 @@ class Notifier:
         self._debug = debug
 
         self._watcher = WatcherWrapper(debounce_ms, event_buffer_size, debug)
-        self._filter = filter
+
+        # Extract filter config to pass to the Rust side
+        if filter is not None:
+            self._ignore_dirs = list(filter.ignore_dirs)
+            self._ignore_patterns = list(filter.ignore_object_patterns)
+            self._ignore_paths = [str(p) for p in filter.ignore_paths]
+        else:
+            self._ignore_dirs = []
+            self._ignore_patterns = []
+            self._ignore_paths = []
 
         self._aiter: Optional[EventBatchIter] = None  # created lazily from Rust iterator
 
@@ -62,22 +71,19 @@ class Notifier:
     def __aiter__(self) -> "Notifier":
         # start/attach the async iterator from Rust; safe to do before watch()
         if self._aiter is None:
-            self._aiter = self._watcher.events(self._tick_ms).__aiter__()
+            self._aiter = self._watcher.events(
+                self._tick_ms, self._ignore_dirs, self._ignore_patterns, self._ignore_paths,
+            ).__aiter__()
 
         return self
 
     async def __anext__(self) -> List[Event]:
         if self._aiter is None:
-            self._aiter = self._watcher.events(self._tick_ms).__aiter__()
+            self._aiter = self._watcher.events(
+                self._tick_ms, self._ignore_dirs, self._ignore_patterns, self._ignore_paths,
+            ).__aiter__()
 
-        while True:
-            batch: List[Event] = await self._aiter.__anext__()
-
-            if self._filter:
-                batch = [e for e in batch if not self._filter(e)]
-
-            if batch:
-                return batch
+        return await self._aiter.__anext__()
 
     def stop(self) -> None:
         self._watcher.stop()

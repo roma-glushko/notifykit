@@ -9,8 +9,8 @@ from notifykit._typing import Event
 
 class EventFilter:
     """
-    A base class to define rules to filter filesystem events
-    TODO: Move filtering to the Rust library
+    A base class to define rules to filter filesystem events.
+    Filter configuration is passed to the Rust library for efficient native filtering.
     """
 
     __slots__ = "_ignore_dirs", "_ignore_object_regexes", "_ignore_paths"

@@ -3,6 +3,7 @@
 
 mod events;
 mod file_cache;
+mod filter;
 mod processor;
 mod watcher;
 
@@ -10,6 +11,7 @@ extern crate notify;
 extern crate pyo3;
 
 use crate::events::EventType;
+use crate::filter::EventFilter;
 use crate::watcher::{Watcher, WatcherError};
 use pyo3::exceptions::{PyOSError, PyStopAsyncIteration};
 use pyo3::prelude::*;
@@ -86,10 +88,26 @@ impl WatcherWrapper {
         })
     }
 
-    fn events(&self, tick_ms: u64) -> PyResult<EventBatchIter> {
+    #[pyo3(signature = (tick_ms, ignore_dirs=vec![], ignore_patterns=vec![], ignore_paths=vec![]))]
+    fn events(
+        &self,
+        tick_ms: u64,
+        ignore_dirs: Vec<String>,
+        ignore_patterns: Vec<String>,
+        ignore_paths: Vec<String>,
+    ) -> PyResult<EventBatchIter> {
+        let event_filter = if ignore_dirs.is_empty() && ignore_patterns.is_empty() && ignore_paths.is_empty() {
+            None
+        } else {
+            Some(
+                EventFilter::new(ignore_dirs, ignore_patterns, ignore_paths)
+                    .map_err(|e| PyOSError::new_err(format!("invalid filter pattern: {e}")))?,
+            )
+        };
+
         let rx = {
             let mut g = self.inner.lock().map_err(|e| PyOSError::new_err(e.to_string()))?;
-            g.start_drain(std::time::Duration::from_millis(tick_ms));
+            g.start_drain(std::time::Duration::from_millis(tick_ms), event_filter);
             g.subscribe()
         };
 
