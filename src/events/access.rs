@@ -60,6 +60,10 @@ pub struct AccessEvent {
 
 #[pymethods]
 impl AccessEvent {
+    #[classattr]
+    #[allow(non_upper_case_globals)]
+    const __match_args__: (&'static str, &'static str, &'static str) = ("path", "access_type", "access_mode");
+
     #[new]
     pub fn new(path: PathBuf, access_type: AccessType, access_mode: Option<AccessMode>) -> Self {
         Self {

@@ -59,6 +59,10 @@ pub struct ModifyDataEvent {
 
 #[pymethods]
 impl ModifyDataEvent {
+    #[classattr]
+    #[allow(non_upper_case_globals)]
+    const __match_args__: (&'static str, &'static str) = ("path", "data_type");
+
     #[new]
     pub fn new(path: PathBuf, data_type: DataType) -> Self {
         Self { path, data_type }
@@ -91,6 +95,10 @@ pub struct ModifyMetadataEvent {
 
 #[pymethods]
 impl ModifyMetadataEvent {
+    #[classattr]
+    #[allow(non_upper_case_globals)]
+    const __match_args__: (&'static str, &'static str) = ("path", "metadata_type");
+
     #[new]
     pub fn new(path: PathBuf, metadata_type: MetadataType) -> Self {
         Self { path, metadata_type }
@@ -121,6 +129,10 @@ pub struct ModifyOtherEvent {
 
 #[pymethods]
 impl ModifyOtherEvent {
+    #[classattr]
+    #[allow(non_upper_case_globals)]
+    const __match_args__: (&'static str,) = ("path",);
+
     #[new]
     pub fn new(path: PathBuf) -> Self {
         Self { path }
@@ -140,6 +152,10 @@ pub struct ModifyUnknownEvent {
 
 #[pymethods]
 impl ModifyUnknownEvent {
+    #[classattr]
+    #[allow(non_upper_case_globals)]
+    const __match_args__: (&'static str,) = ("path",);
+
     #[new]
     pub fn new(path: PathBuf) -> Self {
         Self { path }
