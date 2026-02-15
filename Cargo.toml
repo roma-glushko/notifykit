@@ -1,7 +1,7 @@
 [package]
 name = "notifykit_lib"
 version = "0.2.1"
-edition = "2021"
+edition = "2024"
 
 description = "A toolkit for building applications watching filesystem changes"
 
@@ -11,7 +11,7 @@ homepage = "https://github.com/roma-glushko/notifykit"
 repository = "https://github.com/roma-glushko/notifykit"
 readme = "README.md"
 
-rust-version = "1.83"
+rust-version = "1.85"
 
 [dependencies]
 notify = { version = "8.2.0" }
