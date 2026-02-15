@@ -118,7 +118,7 @@ jobs:
           target: ${{ matrix.target }}
           sccache: 'true'
           manylinux: ${{ matrix.manylinux || 'auto' }}
-          args: --release --out dist --interpreter pypy3.10
+          args: --release --out dist --interpreter pypy3.11
 
       - run: ls -lah dist/
 
@@ -154,7 +154,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --interpreter pypy3.10
+          args: --release --out dist --interpreter pypy3.11
 
       - run: ls -lah dist/
 
