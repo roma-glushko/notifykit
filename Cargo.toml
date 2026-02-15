@@ -16,8 +16,8 @@ rust-version = "1.78"
 [dependencies]
 notify = { version = "8.2.0" }
 pyo3 = { version = "0.28.0", features = ["extension-module", "abi3-py310"] }
-file-id = "0.2.1"
-walkdir = "2.4.0"
+file-id = "0.2.3"
+walkdir = "2.5.0"
 pyo3-async-runtimes = { version = "0.28.0", features = ["tokio-runtime"] }
 tokio = { version = "1.49.0", features = ["rt-multi-thread", "time", "macros", "sync"] }
 
