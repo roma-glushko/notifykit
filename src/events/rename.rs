@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 use std::path::PathBuf;
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone)]
 pub struct RenameEvent {
     #[pyo3(get)]
@@ -21,12 +21,8 @@ impl RenameEvent {
         Self { old_path, new_path }
     }
 
-    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
-        Ok(format!(
-            "RenameEvent({:?}, {:?})",
-            slf.borrow().old_path,
-            slf.borrow().new_path,
-        ))
+    fn __repr__(&self) -> String {
+        format!("RenameEvent({:?}, {:?})", self.old_path, self.new_path,)
     }
 }
 

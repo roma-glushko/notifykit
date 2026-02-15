@@ -5,8 +5,8 @@
     <em>👀 A cross-platform filesystem watcher toolkit for Python</em>
 </p>
 
-![PyPI - Version](https://img.shields.io/pypi/v/notifykit)
-![PyPI - Downloads](https://img.shields.io/pypi/dm/notifykit)
+<a href="https://pypi.org/project/notifykit/"><img src="https://img.shields.io/pypi/v/notifykit" alt="PyPI - Version"></a>
+<a href="https://pypi.org/project/notifykit/"><img src="https://img.shields.io/pypi/dm/notifykit" alt="PyPI - Downloads"></a>
 ![GitHub License](https://img.shields.io/github/license/roma-glushko/notifykit)
 
 **notifykit** is a set of components for building modern Python applications with a need for watching filesystem events efficiently.
@@ -24,13 +24,13 @@ uv add notifykit
 
 notifykit is available for:
 
-CPython 3.9+ on the following platforms:
+CPython 3.10+ on the following platforms:
 
 - **Linux**: x86_64, aarch64, x86, armv7, s390x, ppc64le, musl-x86_64, musl-aarch64
 - **MacOS**: x86_64 & arm64
 - **Windows**: x64 & x86
 
-PyPy 3.9+ on the following platforms:
+PyPy 3.11+ on the following platforms:
 
 - **Linux**: x86_64 & aarch64
 - **MacOS**: x86_64

@@ -1,17 +1,14 @@
-extern crate notify;
-extern crate pyo3;
-
 use std::io::ErrorKind as IOErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use crate::events::EventType;
 use crate::events::access::from_access_kind;
 use crate::events::create::from_create_kind;
 use crate::events::delete::from_delete_kind;
-use crate::events::modify::{from_data_kind, from_metadata_kind, ModifyOtherEvent, ModifyUnknownEvent};
+use crate::events::modify::{ModifyOtherEvent, ModifyUnknownEvent, from_data_kind, from_metadata_kind};
 use crate::events::rename::from_rename_mode;
-use crate::events::EventType;
 use notify::event::ModifyKind;
 use notify::{
     ErrorKind as NotifyErrorKind, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
@@ -149,7 +146,7 @@ impl Watcher {
         }
 
         let (new_tx, _rx) = broadcast::channel::<Vec<EventType>>(self.event_buffer_size);
-        let _old = std::mem::replace(&mut self.tx, new_tx);
+        self.tx = new_tx;
     }
 
     pub fn start_drain(&mut self, debounce_delay: Duration) {
@@ -168,7 +165,7 @@ impl Watcher {
         let tx = self.tx.clone();
         let debug = self.debug;
 
-        self.drain_handle = Some(pyo3_asyncio::tokio::get_runtime().spawn(async move {
+        self.drain_handle = Some(pyo3_async_runtimes::tokio::get_runtime().spawn(async move {
             let mut ticker = time::interval(debounce_delay);
 
             loop {
