@@ -72,6 +72,10 @@ if __name__ == "__main__":
 - Easy to mock in tests
 - Makes common cases easy and advanced cases possible
 
+## Changeset
+
+- v0.3.0 drops support for CPython 3.8 & 3.9 (3.10 is the minimal required) and PyPy 3.10 (3.11 is the minimal required)
+
 ## Sources of Inspiration
 
 - https://github.com/seb-m/pyinotify/issues
