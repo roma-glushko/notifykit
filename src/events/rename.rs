@@ -12,6 +12,10 @@ pub struct RenameEvent {
 
 #[pymethods]
 impl RenameEvent {
+    #[classattr]
+    #[allow(non_upper_case_globals)]
+    const __match_args__: (&'static str, &'static str) = ("old_path", "new_path");
+
     #[new]
     pub fn new(old_path: PathBuf, new_path: PathBuf) -> Self {
         Self { old_path, new_path }

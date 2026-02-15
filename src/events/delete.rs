@@ -14,6 +14,10 @@ pub struct DeleteEvent {
 
 #[pymethods]
 impl DeleteEvent {
+    #[classattr]
+    #[allow(non_upper_case_globals)]
+    const __match_args__: (&'static str, &'static str) = ("path", "file_type");
+
     #[new]
     pub fn new(path: PathBuf, file_type: ObjectType) -> Self {
         Self { path, file_type }
