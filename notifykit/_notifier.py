@@ -72,7 +72,10 @@ class Notifier:
         # start/attach the async iterator from Rust; safe to do before watch()
         if self._aiter is None:
             self._aiter = self._watcher.events(
-                self._tick_ms, self._ignore_dirs, self._ignore_patterns, self._ignore_paths,
+                self._tick_ms,
+                self._ignore_dirs,
+                self._ignore_patterns,
+                self._ignore_paths,
             ).__aiter__()
 
         return self
@@ -80,7 +83,10 @@ class Notifier:
     async def __anext__(self) -> List[Event]:
         if self._aiter is None:
             self._aiter = self._watcher.events(
-                self._tick_ms, self._ignore_dirs, self._ignore_patterns, self._ignore_paths,
+                self._tick_ms,
+                self._ignore_dirs,
+                self._ignore_patterns,
+                self._ignore_paths,
             ).__aiter__()
 
         return await self._aiter.__anext__()

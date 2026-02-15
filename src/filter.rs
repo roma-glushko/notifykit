@@ -88,8 +88,8 @@ mod tests {
     use super::*;
     use std::path::PathBuf;
 
-    use crate::events::create::CreateEvent;
     use crate::events::base::ObjectType;
+    use crate::events::create::CreateEvent;
     use crate::events::rename::RenameEvent;
 
     fn make_filter() -> EventFilter {
@@ -119,12 +119,7 @@ mod tests {
 
     #[test]
     fn test_filter_by_ignore_path() {
-        let f = EventFilter::new(
-            vec![],
-            vec![],
-            vec!["/home/user/.cache".into()],
-        )
-        .unwrap();
+        let f = EventFilter::new(vec![], vec![], vec!["/home/user/.cache".into()]).unwrap();
 
         assert!(f.should_filter_path(Path::new("/home/user/.cache/something")));
         assert!(!f.should_filter_path(Path::new("/home/user/proj/main.py")));
