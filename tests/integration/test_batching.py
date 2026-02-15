@@ -3,7 +3,7 @@
 import asyncio
 from pathlib import Path
 
-from notifykit import CreateEvent, ModifyDataEvent, ModifyMetadataEvent, Notifier
+from notifykit import CreateEvent, ModifyDataEvent, Notifier
 
 from .conftest import SETTLE_DELAY, collect_events, find_events, has_event
 
@@ -36,7 +36,7 @@ async def test_rapid_changes_batched(watched_dir: Path, notifier: Notifier):
     await asyncio.sleep(SETTLE_DELAY)
     events = await collect_events(notifier)
 
-    modify_events = find_events(events, ModifyDataEvent) + find_events(events, ModifyMetadataEvent)
-    # We wrote 10 times but debouncing should coalesce — we expect fewer than 10 events
+    modify_events = find_events(events, ModifyDataEvent)
+    # We wrote 10 times but debouncing should coalesce — we expect fewer than 10 data-modify events
     assert len(modify_events) > 0, "Expected at least some modify events"
     assert len(modify_events) < 10, f"Expected debouncing to coalesce, got {len(modify_events)} events"

@@ -16,6 +16,10 @@ async def test_recursive_watching(watched_dir: Path, notifier: Notifier):
     nested = watched_dir / "a" / "b" / "c"
     nested.mkdir(parents=True)
 
+    # Wait for the watcher to register watches on the new subdirectories
+    await asyncio.sleep(SETTLE_DELAY)
+    await collect_events(notifier)  # drain directory creation events
+
     target = nested / "deep.txt"
     target.write_text("deep")
 
