@@ -24,11 +24,7 @@ impl CreateEvent {
     }
 
     fn __repr__(&self) -> String {
-        format!(
-            "CreateEvent({:?}, {:?})",
-            self.path,
-            self.file_type,
-        )
+        format!("CreateEvent({:?}, {:?})", self.path, self.file_type,)
     }
 }
 

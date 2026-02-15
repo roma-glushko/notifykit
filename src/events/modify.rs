@@ -69,11 +69,7 @@ impl ModifyDataEvent {
     }
 
     fn __repr__(&self) -> String {
-        format!(
-            "ModifyDataEvent({:?}, {:?})",
-            self.path,
-            self.data_type,
-        )
+        format!("ModifyDataEvent({:?}, {:?})", self.path, self.data_type,)
     }
 }
 
@@ -105,11 +101,7 @@ impl ModifyMetadataEvent {
     }
 
     fn __repr__(&self) -> String {
-        format!(
-            "ModifyMetadataEvent({:?}, {:?})",
-            self.path,
-            self.metadata_type,
-        )
+        format!("ModifyMetadataEvent({:?}, {:?})", self.path, self.metadata_type,)
     }
 }
 

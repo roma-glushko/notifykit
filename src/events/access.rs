@@ -76,9 +76,7 @@ impl AccessEvent {
     fn __repr__(&self) -> String {
         format!(
             "AccessEvent({:?}, {:?}, {:?})",
-            self.path,
-            self.access_type,
-            self.access_mode,
+            self.path, self.access_type, self.access_mode,
         )
     }
 }

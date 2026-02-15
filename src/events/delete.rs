@@ -24,11 +24,7 @@ impl DeleteEvent {
     }
 
     fn __repr__(&self) -> String {
-        format!(
-            "DeleteEvent({:?}, {:?})",
-            self.path,
-            self.file_type,
-        )
+        format!("DeleteEvent({:?}, {:?})", self.path, self.file_type,)
     }
 }
 

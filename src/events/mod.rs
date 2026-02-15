@@ -1,5 +1,5 @@
-use pyo3::prelude::*;
 use pyo3::conversion::IntoPyObject;
+use pyo3::prelude::*;
 
 pub(crate) mod access;
 pub(crate) mod base;

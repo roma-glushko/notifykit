@@ -22,11 +22,7 @@ impl RenameEvent {
     }
 
     fn __repr__(&self) -> String {
-        format!(
-            "RenameEvent({:?}, {:?})",
-            self.old_path,
-            self.new_path,
-        )
+        format!("RenameEvent({:?}, {:?})", self.old_path, self.new_path,)
     }
 }
 
