@@ -51,6 +51,7 @@ test-linux: ## Run tests in a Linux Docker container
 	@docker run --rm notifykit-test
 
 lint: ## Lint all Python source code without changes
+	@uv lock
 	@uv run ruff check $(SOURCE)
 	@uv run ruff format $(SOURCE) --diff
 	@uv run mypy --pretty $(SOURCE)
