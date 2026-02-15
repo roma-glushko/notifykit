@@ -146,7 +146,7 @@ impl Watcher {
         }
 
         let (new_tx, _rx) = broadcast::channel::<Vec<EventType>>(self.event_buffer_size);
-        let _old = std::mem::replace(&mut self.tx, new_tx);
+        self.tx = new_tx;
     }
 
     pub fn start_drain(&mut self, debounce_delay: Duration) {
