@@ -291,7 +291,7 @@ impl<T: FileIdCache> EventProcessor for CrossPlatformEventProcessor<T> {
 
         if let Some(rescan_event) = self.rescan_event.take() {
             if now.saturating_duration_since(rescan_event.time) >= self.buffering_time {
-                // log::trace!("debounced event: {rescan_event:?}");
+                log::trace!("debounced event: {rescan_event:?}");
 
                 events_to_return.push(rescan_event);
             } else {
@@ -352,7 +352,7 @@ impl<T: FileIdCache> EventProcessor for CrossPlatformEventProcessor<T> {
 
     /// Add new event to debouncer cache
     fn add_event(&mut self, event: NotifyEvent) {
-        // log::trace!("raw event: {event:?}");
+        log::trace!("raw event: {event:?}");
 
         if event.need_rescan() {
             self.file_cache.rescan();

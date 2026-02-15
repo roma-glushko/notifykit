@@ -26,7 +26,6 @@ pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
 
 #[derive(Debug)]
 pub(crate) struct Watcher {
-    debug: bool,
     event_buffer_size: usize,
     inner: RecommendedWatcher,
     // file_cache: FileCache,
@@ -37,7 +36,7 @@ pub(crate) struct Watcher {
 }
 
 impl Watcher {
-    pub fn new(buffering_time_ms: u64, event_buffer_size: usize, debug: bool) -> Result<Self, notify::Error> {
+    pub fn new(buffering_time_ms: u64, event_buffer_size: usize) -> Result<Self, notify::Error> {
         // TODO: hide usage of file cache from Watcher
         // let file_cache = FileCache::new();
         // let file_cache_c = file_cache.clone();
@@ -53,14 +52,12 @@ impl Watcher {
                 let mut event_processor = match processor_c.lock() {
                     Ok(guard) => guard,
                     Err(e) => {
-                        eprintln!("notifykit: event processor lock poisoned, dropping event: {e}");
+                        log::error!("event processor lock poisoned, dropping event: {e}");
                         return;
                     }
                 };
 
-                if debug {
-                    println!("raw event: {:?}", e);
-                }
+                log::debug!("raw event: {:?}", e);
 
                 match e {
                     Ok(e) => event_processor.add_event(e),
@@ -71,7 +68,6 @@ impl Watcher {
         )?;
 
         Ok(Self {
-            debug,
             event_buffer_size,
             inner,
             processor,
@@ -109,9 +105,7 @@ impl Watcher {
             // self.file_cache.add_root(path, mode);
         }
 
-        if self.debug {
-            println!("watcher: {:?}", self.inner);
-        }
+        log::debug!("watcher: {:?}", self.inner);
 
         Ok(())
     }
@@ -129,9 +123,7 @@ impl Watcher {
             // self.file_cache.remove_root(path);
         }
 
-        if self.debug {
-            println!("watcher: {:?}", self.inner);
-        }
+        log::debug!("watcher: {:?}", self.inner);
 
         Ok(())
     }
@@ -163,7 +155,6 @@ impl Watcher {
 
         let proc = Arc::clone(&self.processor);
         let tx = self.tx.clone();
-        let debug = self.debug;
 
         self.drain_handle = Some(pyo3_async_runtimes::tokio::get_runtime().spawn(async move {
             let mut ticker = time::interval(debounce_delay);
@@ -176,14 +167,14 @@ impl Watcher {
                             let mut p = match proc.lock() {
                                 Ok(guard) => guard,
                                 Err(e) => {
-                                    eprintln!("notifykit: event processor lock poisoned, skipping drain tick: {e}");
+                                    log::error!("event processor lock poisoned, skipping drain tick: {e}");
                                     continue;
                                 }
                             };
                             (p.get_events(), p.get_errors())
                         };
-                        if debug && !raw.is_empty() { println!("processed: {:?}", raw); }
-                        if !errs.is_empty() { eprintln!("errors: {:?}", errs); }
+                        if !raw.is_empty() { log::debug!("processed: {:?}", raw); }
+                        if !errs.is_empty() { log::warn!("watcher errors: {:?}", errs); }
                         if raw.is_empty() { continue; }
 
                         let mut batch = Vec::with_capacity(raw.len());

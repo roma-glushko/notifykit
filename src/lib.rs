@@ -29,9 +29,9 @@ pub struct WatcherWrapper {
 #[pymethods]
 impl WatcherWrapper {
     #[new]
-    fn __init__(debounce_ms: u64, event_buffer_size: usize, debug: bool) -> PyResult<Self> {
+    fn __init__(debounce_ms: u64, event_buffer_size: usize) -> PyResult<Self> {
         let inner =
-            Watcher::new(debounce_ms, event_buffer_size, debug).map_err(|e| PyOSError::new_err(e.to_string()))?;
+            Watcher::new(debounce_ms, event_buffer_size).map_err(|e| PyOSError::new_err(e.to_string()))?;
 
         Ok(WatcherWrapper {
             inner: Arc::new(Mutex::new(inner)),
@@ -136,7 +136,7 @@ impl EventBatchIter {
                         });
                     }
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                        eprintln!("notifykit: consumer too slow, {n} event batch(es) dropped");
+                        log::warn!("consumer too slow, {n} event batch(es) dropped");
                         continue;
                     }
                     Err(tokio::sync::broadcast::error::RecvError::Closed) => {

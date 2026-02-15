@@ -14,6 +14,7 @@ readme = "README.md"
 rust-version = "1.85"
 
 [dependencies]
+log = "0.4"
 notify = { version = "8.2.0" }
 pyo3 = { version = "0.28.0", features = ["extension-module", "abi3-py310"] }
 file-id = "0.2.3"

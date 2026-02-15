@@ -36,14 +36,12 @@ class Notifier:
         debounce_ms: int = 200,
         tick_ms: int = 50,
         event_buffer_size: int = 1024,
-        debug: bool = False,
         filter: Optional[EventFilter] = None,
     ) -> None:
         self._debounce_ms = debounce_ms
         self._tick_ms = tick_ms
-        self._debug = debug
 
-        self._watcher = WatcherWrapper(debounce_ms, event_buffer_size, debug)
+        self._watcher = WatcherWrapper(debounce_ms, event_buffer_size)
         self._filter = filter
 
         self._aiter: Optional[EventBatchIter] = None  # created lazily from Rust iterator
