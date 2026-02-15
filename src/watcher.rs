@@ -23,6 +23,7 @@ use tokio::{
     time,
 };
 // use crate::file_cache::FileCache;
+use crate::filter::EventFilter;
 use crate::processor::{BatchProcessor, EventProcessor, RawEvent};
 
 pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
@@ -152,7 +153,7 @@ impl Watcher {
         let _old = std::mem::replace(&mut self.tx, new_tx);
     }
 
-    pub fn start_drain(&mut self, debounce_delay: Duration) {
+    pub fn start_drain(&mut self, debounce_delay: Duration, event_filter: Option<EventFilter>) {
         if let Some(tx) = self.stop_tx.take() {
             let _ = tx.send(());
         }
@@ -191,7 +192,15 @@ impl Watcher {
 
                         let mut batch = Vec::with_capacity(raw.len());
                         for r in raw {
-                            if let Some(ev) = create_event(&r) { batch.push(ev); }
+                            if let Some(ev) = create_event(&r) {
+                                if let Some(ref filter) = event_filter {
+                                    if !filter.should_filter(&ev) {
+                                        batch.push(ev);
+                                    }
+                                } else {
+                                    batch.push(ev);
+                                }
+                            }
                         }
 
                         if !batch.is_empty() { let _ = tx.send(batch); }
