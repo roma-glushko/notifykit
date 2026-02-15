@@ -502,24 +502,28 @@ source = { editable = "." }
 
 [package.dev-dependencies]
 dev = [
-    { name = "mkdocs" },
-    { name = "mkdocs-material", extra = ["imaging"] },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
+]
+docs = [
+    { name = "mkdocs" },
+    { name = "mkdocs-material", extra = ["imaging"] },
 ]
 
 [package.metadata]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "mkdocs", specifier = ">=1.6.1" },
-    { name = "mkdocs-material", extras = ["imaging"], specifier = ">=9.6.18" },
     { name = "mypy", specifier = ">=1.14.1" },
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "pytest-asyncio", specifier = ">=0.25.0" },
     { name = "ruff", specifier = ">=0.12.10" },
+]
+docs = [
+    { name = "mkdocs", specifier = ">=1.6.1" },
+    { name = "mkdocs-material", extras = ["imaging"], specifier = ">=9.6.18" },
 ]
 
 [[package]]
