@@ -5,6 +5,10 @@
     <em>👀 A cross-platform filesystem watcher toolkit for Python</em>
 </p>
 
+![PyPI - Version](https://img.shields.io/pypi/v/notifykit)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/notifykit)
+![GitHub License](https://img.shields.io/github/license/roma-glushko/notifykit)
+
 **notifykit** is a set of components for building modern Python applications with a need for watching filesystem events efficiently.
 
 > [!Note]
