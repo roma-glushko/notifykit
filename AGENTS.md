@@ -19,6 +19,10 @@ Notifykit is a cross-platform, high-performance filesystem event watcher for Pyt
 - `maturine` for building and publishing Python packages
 - `pytest` for testing
 
+## Building
+
+- `make lib-dev` - rebuilds the Rust library in development mode, so it's up to date and ready for testing.
+
 ## Testing
 
 - `make lint-fix` - Run linters and fix issues
