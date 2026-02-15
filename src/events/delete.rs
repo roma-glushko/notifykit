@@ -3,7 +3,7 @@ use notify::event::RemoveKind;
 use pyo3::prelude::*;
 use std::path::PathBuf;
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone)]
 pub struct DeleteEvent {
     #[pyo3(get)]
@@ -23,12 +23,12 @@ impl DeleteEvent {
         Self { path, file_type }
     }
 
-    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
-        Ok(format!(
+    fn __repr__(&self) -> String {
+        format!(
             "DeleteEvent({:?}, {:?})",
-            slf.borrow().path,
-            slf.borrow().file_type,
-        ))
+            self.path,
+            self.file_type,
+        )
     }
 }
 

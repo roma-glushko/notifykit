@@ -1,19 +1,13 @@
-// pyo3 0.20 #[pymethods] macro triggers this lint on Rust 1.82+; fixed in pyo3 0.21
-#![allow(non_local_definitions)]
-
 mod events;
 mod file_cache;
 mod processor;
 mod watcher;
 
-extern crate notify;
-extern crate pyo3;
-
 use crate::events::EventType;
 use crate::watcher::{Watcher, WatcherError};
 use pyo3::exceptions::{PyOSError, PyStopAsyncIteration};
 use pyo3::prelude::*;
-use pyo3::pyasync::IterANextOutput;
+use pyo3::types::PyList;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Builder;
 use tokio::sync::broadcast;
@@ -50,10 +44,10 @@ impl WatcherWrapper {
         paths: Vec<String>,
         recursive: bool,
         ignore_permission_errors: bool,
-    ) -> PyResult<&'py PyAny> {
+    ) -> PyResult<Bound<'py, PyAny>> {
         let watcher = Arc::clone(&self.inner);
 
-        pyo3_asyncio::tokio::future_into_py(py, async move {
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
             let res = tokio::task::spawn_blocking(move || {
                 let mut guard = watcher.lock().map_err(|e| PyOSError::new_err(e.to_string()))?;
 
@@ -68,10 +62,10 @@ impl WatcherWrapper {
         })
     }
 
-    pub fn unwatch<'py>(&mut self, py: Python<'py>, paths: Vec<String>) -> PyResult<&'py PyAny> {
+    pub fn unwatch<'py>(&mut self, py: Python<'py>, paths: Vec<String>) -> PyResult<Bound<'py, PyAny>> {
         let watcher = self.inner.clone();
 
-        pyo3_asyncio::tokio::future_into_py(py, async move {
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
             let res = tokio::task::spawn_blocking(move || {
                 let mut guard = watcher.lock().map_err(|e| PyOSError::new_err(e.to_string()))?;
 
@@ -128,21 +122,17 @@ impl EventBatchIter {
         slf
     }
 
-    fn __anext__(&self, py: Python) -> PyResult<IterANextOutput<PyObject, PyObject>> {
-        use pyo3::types::PyList;
-        use pyo3::IntoPy;
-
+    fn __anext__<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyAny>>> {
         let rx = Arc::clone(&self.rx);
 
-        let fut = pyo3_asyncio::tokio::future_into_py::<_, PyObject>(py, async move {
+        let fut = pyo3_async_runtimes::tokio::future_into_py(py, async move {
             loop {
                 let mut guard = rx.lock().await;
                 match guard.recv().await {
                     Ok(batch) => {
-                        // Build the Python list under the GIL and return a PyObject
-                        return Python::with_gil(|py| {
-                            let objs: Vec<PyObject> = batch.iter().map(|e| e.to_object(py)).collect();
-                            Ok(PyList::new(py, objs).into_py(py))
+                        return Python::attach(|py| {
+                            let list = PyList::new(py, &batch)?;
+                            Ok(list.into_any().unbind())
                         });
                     }
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
@@ -150,22 +140,23 @@ impl EventBatchIter {
                         continue;
                     }
                     Err(tokio::sync::broadcast::error::RecvError::Closed) => {
-                        // Signal end of async iteration
                         return Err(PyErr::new::<PyStopAsyncIteration, _>("event stream closed"));
                     }
                 }
             }
         })?;
 
-        Ok(IterANextOutput::Yield(fut.into_py(py)))
+        Ok(Some(fut))
     }
 }
 
 #[pymodule]
-fn _notifykit_lib(py: Python, m: &PyModule) -> PyResult<()> {
+fn _notifykit_lib(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    let py = m.py();
+
     let mut builder = Builder::new_multi_thread();
     builder.enable_all();
-    pyo3_asyncio::tokio::init(builder);
+    pyo3_async_runtimes::tokio::init(builder);
 
     let mut version = env!("CARGO_PKG_VERSION").to_string();
     version = version.replace("-alpha", "a").replace("-beta", "b");
@@ -196,7 +187,6 @@ fn _notifykit_lib(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<ModifyOtherEvent>()?;
     m.add_class::<ModifyUnknownEvent>()?;
 
-    // Raname
     m.add_class::<RenameEvent>()?;
 
     Ok(())

@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-use pyo3::ToPyObject;
+use pyo3::conversion::IntoPyObject;
 
 pub(crate) mod access;
 pub(crate) mod base;
@@ -20,17 +20,21 @@ pub enum EventType {
     Rename(rename::RenameEvent),
 }
 
-impl ToPyObject for EventType {
-    fn to_object(&self, py: Python) -> PyObject {
-        match self {
-            EventType::Access(event) => event.clone().into_py(py),
-            EventType::Create(event) => event.clone().into_py(py),
-            EventType::Delete(event) => event.clone().into_py(py),
-            EventType::ModifyMetadata(event) => event.clone().into_py(py),
-            EventType::ModifyData(event) => event.clone().into_py(py),
-            EventType::ModifyOther(event) => event.clone().into_py(py),
-            EventType::ModifyUnknown(event) => event.clone().into_py(py),
-            EventType::Rename(event) => event.clone().into_py(py),
-        }
+impl<'py> IntoPyObject<'py> for &EventType {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Bound<'py, PyAny>, PyErr> {
+        Ok(match self {
+            EventType::Access(event) => Bound::new(py, event.clone())?.into_any(),
+            EventType::Create(event) => Bound::new(py, event.clone())?.into_any(),
+            EventType::Delete(event) => Bound::new(py, event.clone())?.into_any(),
+            EventType::ModifyMetadata(event) => Bound::new(py, event.clone())?.into_any(),
+            EventType::ModifyData(event) => Bound::new(py, event.clone())?.into_any(),
+            EventType::ModifyOther(event) => Bound::new(py, event.clone())?.into_any(),
+            EventType::ModifyUnknown(event) => Bound::new(py, event.clone())?.into_any(),
+            EventType::Rename(event) => Bound::new(py, event.clone())?.into_any(),
+        })
     }
 }

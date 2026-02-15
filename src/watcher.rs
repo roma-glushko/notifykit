@@ -1,5 +1,3 @@
-extern crate notify;
-extern crate pyo3;
 
 use std::io::ErrorKind as IOErrorKind;
 use std::path::{Path, PathBuf};
@@ -168,7 +166,7 @@ impl Watcher {
         let tx = self.tx.clone();
         let debug = self.debug;
 
-        self.drain_handle = Some(pyo3_asyncio::tokio::get_runtime().spawn(async move {
+        self.drain_handle = Some(pyo3_async_runtimes::tokio::get_runtime().spawn(async move {
             let mut ticker = time::interval(debounce_delay);
 
             loop {
