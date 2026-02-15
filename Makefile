@@ -46,6 +46,10 @@ test: ## Run all tests
 test-v: ## Run all tests (verbose)
 	@uv run pytest $(TESTS) -v
 
+test-linux: ## Run tests in a Linux Docker container
+	@docker build -t notifykit-test -f Dockerfile.test .
+	@docker run --rm notifykit-test
+
 lint: ## Lint all Python source code without changes
 	@uv run ruff check $(SOURCE)
 	@uv run ruff format $(SOURCE) --diff
