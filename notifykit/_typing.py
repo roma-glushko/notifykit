@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypeAlias, Union
+from typing import Union
 
 from notifykit._notifykit_lib import (
     AccessEvent,
@@ -13,7 +13,7 @@ from notifykit._notifykit_lib import (
     RenameEvent,
 )
 
-Event: TypeAlias = Union[
+Event = Union[
     AccessEvent,
     CreateEvent,
     ModifyDataEvent,
