@@ -3,12 +3,12 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use crate::events::EventType;
 use crate::events::access::from_access_kind;
 use crate::events::create::from_create_kind;
 use crate::events::delete::from_delete_kind;
-use crate::events::modify::{from_data_kind, from_metadata_kind, ModifyOtherEvent, ModifyUnknownEvent};
+use crate::events::modify::{ModifyOtherEvent, ModifyUnknownEvent, from_data_kind, from_metadata_kind};
 use crate::events::rename::from_rename_mode;
-use crate::events::EventType;
 use notify::event::ModifyKind;
 use notify::{
     ErrorKind as NotifyErrorKind, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
