@@ -108,6 +108,7 @@ class WatcherWrapper:
     def __init__(
         self,
         debounce_ms: int,
+        event_buffer_size: int = 1024,
         debug: bool = False,
     ) -> None: ...
     async def watch(self, paths: List[str], recursive: bool = True, ignore_permission_errors: bool = False) -> None: ...

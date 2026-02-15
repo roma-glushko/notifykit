@@ -1,3 +1,6 @@
+// pyo3 0.20 #[pymethods] macro triggers this lint on Rust 1.82+; fixed in pyo3 0.21
+#![allow(non_local_definitions)]
+
 mod events;
 mod file_cache;
 mod processor;
@@ -32,8 +35,9 @@ pub struct WatcherWrapper {
 #[pymethods]
 impl WatcherWrapper {
     #[new]
-    fn __init__(debounce_ms: u64, debug: bool) -> PyResult<Self> {
-        let inner = Watcher::new(debounce_ms, debug).map_err(|e| PyOSError::new_err(e.to_string()))?;
+    fn __init__(debounce_ms: u64, event_buffer_size: usize, debug: bool) -> PyResult<Self> {
+        let inner =
+            Watcher::new(debounce_ms, event_buffer_size, debug).map_err(|e| PyOSError::new_err(e.to_string()))?;
 
         Ok(WatcherWrapper {
             inner: Arc::new(Mutex::new(inner)),
@@ -50,15 +54,17 @@ impl WatcherWrapper {
         let watcher = Arc::clone(&self.inner);
 
         pyo3_asyncio::tokio::future_into_py(py, async move {
-            tokio::task::spawn_blocking(move || {
-                let mut guard = watcher.lock().unwrap();
+            let res = tokio::task::spawn_blocking(move || {
+                let mut guard = watcher.lock().map_err(|e| PyOSError::new_err(e.to_string()))?;
 
                 guard.watch(&paths, recursive, ignore_permission_errors)
             })
-            .await
-            .ok();
+            .await;
 
-            Ok(())
+            match res {
+                Ok(inner) => inner,
+                Err(join_err) => Err(PyOSError::new_err(join_err.to_string())),
+            }
         })
     }
 
@@ -66,21 +72,23 @@ impl WatcherWrapper {
         let watcher = self.inner.clone();
 
         pyo3_asyncio::tokio::future_into_py(py, async move {
-            tokio::task::spawn_blocking(move || {
-                let mut guard = watcher.lock().unwrap();
+            let res = tokio::task::spawn_blocking(move || {
+                let mut guard = watcher.lock().map_err(|e| PyOSError::new_err(e.to_string()))?;
 
                 guard.unwatch(paths)
             })
-            .await
-            .ok();
+            .await;
 
-            Ok(())
+            match res {
+                Ok(inner) => inner,
+                Err(join_err) => Err(PyOSError::new_err(join_err.to_string())),
+            }
         })
     }
 
     fn events(&self, tick_ms: u64) -> PyResult<EventBatchIter> {
         let rx = {
-            let mut g = self.inner.lock().unwrap();
+            let mut g = self.inner.lock().map_err(|e| PyOSError::new_err(e.to_string()))?;
             g.start_drain(std::time::Duration::from_millis(tick_ms));
             g.subscribe()
         };
@@ -95,7 +103,7 @@ impl WatcherWrapper {
     }
 
     pub fn __repr__(&mut self) -> PyResult<String> {
-        let mut watcher = self.inner.lock().unwrap();
+        let mut watcher = self.inner.lock().map_err(|e| PyOSError::new_err(e.to_string()))?;
 
         Ok(watcher.repr())
     }
@@ -137,8 +145,8 @@ impl EventBatchIter {
                             Ok(PyList::new(py, objs).into_py(py))
                         });
                     }
-                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
-                        // Skip lost batches and keep waiting
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                        eprintln!("notifykit: consumer too slow, {n} event batch(es) dropped");
                         continue;
                     }
                     Err(tokio::sync::broadcast::error::RecvError::Closed) => {

@@ -25,11 +25,30 @@ lib-lint-fix:  ## Lint the library codebase (Rust)
 	@cargo clippy --version
 	@cargo clippy -- -D warnings
 
+build: ## Build the library
+	@uv build
+
+build-linux: ## Build the library for Linux (x86_64, abi3 wheel)
+	@docker run --rm \
+       -v "$(PWD)":/io \
+       ghcr.io/pyo3/maturin:latest \
+       build --release --out dist
+
 lib-dev: tools  ## Build the library codebase as importable .so module
 	@uvx maturin develop
 
 lib-release: ## Build an optimized version of the .so module
 	@uvx maturin build -r
+
+test: ## Run all tests
+	@uv run pytest $(TESTS)
+
+test-v: ## Run all tests (verbose)
+	@uv run pytest $(TESTS) -v
+
+test-linux: ## Run tests in a Linux Docker container
+	@docker build -t notifykit-test -f Dockerfile.test .
+	@docker run --rm notifykit-test
 
 lint: ## Lint all Python source code without changes
 	@uv run ruff check $(SOURCE)

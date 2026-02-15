@@ -1,0 +1,20 @@
+FROM python:3.12-slim
+
+# Install build dependencies and Rust
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl build-essential pkg-config && \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+WORKDIR /app
+COPY . .
+
+RUN uv sync --all-extras --dev
+RUN uvx maturin develop
+
+CMD ["uv", "run", "pytest", "tests", "-v"]

@@ -436,6 +436,10 @@ impl BatchProcessor {
 
 impl EventProcessor for BatchProcessor {
     fn get_events(&mut self) -> Vec<RawEvent> {
+        if self.events.is_empty() {
+            return Vec::new();
+        }
+
         let now = Instant::now();
 
         // Assuming expired items are contiguous and at the beginning of the vector
@@ -449,9 +453,11 @@ impl EventProcessor for BatchProcessor {
     }
 
     fn get_errors(&mut self) -> Vec<NotifyError> {
-        let mut v = Vec::new();
-        std::mem::swap(&mut v, &mut self.errors);
-        v
+        if self.errors.is_empty() {
+            return Vec::new();
+        }
+
+        std::mem::take(&mut self.errors)
     }
 
     fn add_event(&mut self, event: NotifyEvent) {

@@ -2,7 +2,6 @@ from os import PathLike
 from typing import Sequence, List, Optional
 
 from notifykit._typing import Event
-from notifykit._notifier import AnyEvent
 
 
 class NotifierMock:
@@ -13,10 +12,6 @@ class NotifierMock:
     def __init__(
         self,
         events_batches: Optional[List[List[Event]]] = None,
-        debounce_ms: int = 200,
-        tick_ms: int = 50,
-        debug: bool = False,
-        stop_event: Optional[AnyEvent] = None,
     ) -> None:
         self._watch_paths: List[PathLike[str]] = []
         self._events_batches = events_batches or []
@@ -61,3 +56,6 @@ class NotifierMock:
             raise StopAsyncIteration
 
         return self._events_batches.pop(0)
+
+    def stop(self) -> None:
+        self._events_batches.clear()

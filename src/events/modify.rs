@@ -146,6 +146,6 @@ impl ModifyUnknownEvent {
     }
 
     fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
-        Ok(format!("ModifyAnyEvent({:?})", slf.borrow().path,))
+        Ok(format!("ModifyUnknownEvent({:?})", slf.borrow().path,))
     }
 }

@@ -127,6 +127,7 @@ impl FileIdCache for FileCache {
 /// An implementation of the `FileIdCache` trait that doesn't hold any data.
 ///
 /// This pseudo cache can be used to disable the file tracking using file system IDs.
+#[allow(dead_code)]
 pub struct NoCache;
 
 impl FileIdCache for NoCache {

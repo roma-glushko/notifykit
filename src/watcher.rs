@@ -4,7 +4,6 @@ extern crate pyo3;
 use std::io::ErrorKind as IOErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::thread;
 use std::time::Duration;
 
 use crate::events::access::from_access_kind;
@@ -31,15 +30,17 @@ pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
 #[derive(Debug)]
 pub(crate) struct Watcher {
     debug: bool,
+    event_buffer_size: usize,
     inner: RecommendedWatcher,
     // file_cache: FileCache,
     processor: Arc<Mutex<BatchProcessor>>, // TODO: use the EventProcessor trait instead
     tx: broadcast::Sender<Vec<EventType>>,
     stop_tx: Option<oneshot::Sender<()>>,
+    drain_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl Watcher {
-    pub fn new(buffering_time_ms: u64, debug: bool) -> Result<Self, notify::Error> {
+    pub fn new(buffering_time_ms: u64, event_buffer_size: usize, debug: bool) -> Result<Self, notify::Error> {
         // TODO: hide usage of file cache from Watcher
         // let file_cache = FileCache::new();
         // let file_cache_c = file_cache.clone();
@@ -48,11 +49,17 @@ impl Watcher {
         let processor = Arc::new(Mutex::new(BatchProcessor::new(buffering_duration)));
         let processor_c = processor.clone();
 
-        let (tx, _rx) = broadcast::channel::<Vec<EventType>>(1024); // TODO: make buffer size configurable
+        let (tx, _rx) = broadcast::channel::<Vec<EventType>>(event_buffer_size);
 
         let inner = RecommendedWatcher::new(
             move |e: Result<Event, notify::Error>| {
-                let mut event_processor = processor_c.lock().unwrap();
+                let mut event_processor = match processor_c.lock() {
+                    Ok(guard) => guard,
+                    Err(e) => {
+                        eprintln!("notifykit: event processor lock poisoned, dropping event: {e}");
+                        return;
+                    }
+                };
 
                 if debug {
                     println!("raw event: {:?}", e);
@@ -68,10 +75,12 @@ impl Watcher {
 
         Ok(Self {
             debug,
+            event_buffer_size,
             inner,
             processor,
             tx,
             stop_tx: None,
+            drain_handle: None,
         })
     }
 
@@ -135,13 +144,21 @@ impl Watcher {
             let _ = tx.send(());
         }
 
-        let (new_tx, _rx) = broadcast::channel::<Vec<EventType>>(1024);
+        if let Some(handle) = self.drain_handle.take() {
+            handle.abort();
+        }
+
+        let (new_tx, _rx) = broadcast::channel::<Vec<EventType>>(self.event_buffer_size);
         let _old = std::mem::replace(&mut self.tx, new_tx);
     }
 
     pub fn start_drain(&mut self, debounce_delay: Duration) {
         if let Some(tx) = self.stop_tx.take() {
             let _ = tx.send(());
+        }
+
+        if let Some(handle) = self.drain_handle.take() {
+            handle.abort();
         }
 
         let (stop_tx, mut stop_rx) = oneshot::channel();
@@ -151,35 +168,37 @@ impl Watcher {
         let tx = self.tx.clone();
         let debug = self.debug;
 
-        thread::spawn(move || {
-            let rt = tokio::runtime::Runtime::new().expect("tokio rt");
+        self.drain_handle = Some(pyo3_asyncio::tokio::get_runtime().spawn(async move {
+            let mut ticker = time::interval(debounce_delay);
 
-            rt.block_on(async move {
-                let mut ticker = time::interval(debounce_delay);
-
-                loop {
-                    tokio::select! {
-                        _ = &mut stop_rx => break,
-                        _ = ticker.tick() => {
-                            let (raw, errs) = {
-                                let mut p = proc.lock().unwrap();
-                                (p.get_events(), p.get_errors())
+            loop {
+                tokio::select! {
+                    _ = &mut stop_rx => break,
+                    _ = ticker.tick() => {
+                        let (raw, errs) = {
+                            let mut p = match proc.lock() {
+                                Ok(guard) => guard,
+                                Err(e) => {
+                                    eprintln!("notifykit: event processor lock poisoned, skipping drain tick: {e}");
+                                    continue;
+                                }
                             };
-                            if debug && !raw.is_empty() { println!("processed: {:?}", raw); }
-                            if !errs.is_empty() { eprintln!("errors: {:?}", errs); }
-                            if raw.is_empty() { continue; }
+                            (p.get_events(), p.get_errors())
+                        };
+                        if debug && !raw.is_empty() { println!("processed: {:?}", raw); }
+                        if !errs.is_empty() { eprintln!("errors: {:?}", errs); }
+                        if raw.is_empty() { continue; }
 
-                            let mut batch = Vec::with_capacity(raw.len());
-                            for r in raw {
-                                if let Some(ev) = create_event(&r) { batch.push(ev); }
-                            }
-
-                            if !batch.is_empty() { let _ = tx.send(batch); } // drop on overflow
+                        let mut batch = Vec::with_capacity(raw.len());
+                        for r in raw {
+                            if let Some(ev) = create_event(&r) { batch.push(ev); }
                         }
+
+                        if !batch.is_empty() { let _ = tx.send(batch); }
                     }
                 }
-            });
-        });
+            }
+        }));
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<Vec<EventType>> {
