@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use std::convert::From;
 use std::path::PathBuf;
 
-#[pyclass(rename_all = "SCREAMING_SNAKE_CASE")]
+#[pyclass(rename_all = "SCREAMING_SNAKE_CASE", from_py_object)]
 #[derive(Debug, Copy, Clone)]
 pub enum AccessType {
     Unknown = 0,
@@ -25,7 +25,7 @@ impl From<AccessKind> for AccessType {
     }
 }
 
-#[pyclass(rename_all = "SCREAMING_SNAKE_CASE")]
+#[pyclass(rename_all = "SCREAMING_SNAKE_CASE", from_py_object)]
 #[derive(Debug, Copy, Clone)]
 pub enum AccessMode {
     Unknown = 0,
@@ -47,7 +47,7 @@ impl From<NotifyAccessMode> for AccessMode {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone)]
 pub struct AccessEvent {
     #[pyo3(get)]
@@ -60,6 +60,10 @@ pub struct AccessEvent {
 
 #[pymethods]
 impl AccessEvent {
+    #[classattr]
+    #[allow(non_upper_case_globals)]
+    const __match_args__: (&'static str, &'static str, &'static str) = ("path", "access_type", "access_mode");
+
     #[new]
     pub fn new(path: PathBuf, access_type: AccessType, access_mode: Option<AccessMode>) -> Self {
         Self {
@@ -69,13 +73,11 @@ impl AccessEvent {
         }
     }
 
-    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
-        Ok(format!(
-            "AccessEvent({:?}, {:?},  {:?})",
-            slf.borrow().path,
-            slf.borrow().access_type,
-            slf.borrow().access_mode,
-        ))
+    fn __repr__(&self) -> String {
+        format!(
+            "AccessEvent({:?}, {:?}, {:?})",
+            self.path, self.access_type, self.access_mode,
+        )
     }
 }
 

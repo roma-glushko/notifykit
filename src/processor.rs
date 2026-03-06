@@ -347,9 +347,7 @@ impl<T: FileIdCache> EventProcessor for CrossPlatformEventProcessor<T> {
 
     /// Returns all currently stored errors
     fn get_errors(&mut self) -> Vec<NotifyError> {
-        let mut v = Vec::new();
-        std::mem::swap(&mut v, &mut self.errors);
-        v
+        std::mem::take(&mut self.errors)
     }
 
     /// Add new event to debouncer cache

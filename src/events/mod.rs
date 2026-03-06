@@ -1,7 +1,5 @@
-use std::path::Path;
-
+use pyo3::conversion::IntoPyObject;
 use pyo3::prelude::*;
-use pyo3::ToPyObject;
 
 pub(crate) mod access;
 pub(crate) mod base;
@@ -22,34 +20,21 @@ pub enum EventType {
     Rename(rename::RenameEvent),
 }
 
-impl EventType {
-    /// Returns the primary path for non-rename events.
-    /// For rename events, use the fields directly.
-    pub fn path(&self) -> Option<&Path> {
-        match self {
-            EventType::Access(e) => Some(&e.path),
-            EventType::Create(e) => Some(&e.path),
-            EventType::Delete(e) => Some(&e.path),
-            EventType::ModifyMetadata(e) => Some(&e.path),
-            EventType::ModifyData(e) => Some(&e.path),
-            EventType::ModifyUnknown(e) => Some(&e.path),
-            EventType::ModifyOther(e) => Some(&e.path),
-            EventType::Rename(_) => None,
-        }
-    }
-}
+impl<'py> IntoPyObject<'py> for &EventType {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
 
-impl ToPyObject for EventType {
-    fn to_object(&self, py: Python) -> PyObject {
-        match self {
-            EventType::Access(event) => event.clone().into_py(py),
-            EventType::Create(event) => event.clone().into_py(py),
-            EventType::Delete(event) => event.clone().into_py(py),
-            EventType::ModifyMetadata(event) => event.clone().into_py(py),
-            EventType::ModifyData(event) => event.clone().into_py(py),
-            EventType::ModifyOther(event) => event.clone().into_py(py),
-            EventType::ModifyUnknown(event) => event.clone().into_py(py),
-            EventType::Rename(event) => event.clone().into_py(py),
-        }
+    fn into_pyobject(self, py: Python<'py>) -> Result<Bound<'py, PyAny>, PyErr> {
+        Ok(match self {
+            EventType::Access(event) => Bound::new(py, event.clone())?.into_any(),
+            EventType::Create(event) => Bound::new(py, event.clone())?.into_any(),
+            EventType::Delete(event) => Bound::new(py, event.clone())?.into_any(),
+            EventType::ModifyMetadata(event) => Bound::new(py, event.clone())?.into_any(),
+            EventType::ModifyData(event) => Bound::new(py, event.clone())?.into_any(),
+            EventType::ModifyOther(event) => Bound::new(py, event.clone())?.into_any(),
+            EventType::ModifyUnknown(event) => Bound::new(py, event.clone())?.into_any(),
+            EventType::Rename(event) => Bound::new(py, event.clone())?.into_any(),
+        })
     }
 }

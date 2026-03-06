@@ -2,7 +2,7 @@ use notify::event::{DataChange, MetadataKind};
 use pyo3::prelude::*;
 use std::path::PathBuf;
 
-#[pyclass(rename_all = "SCREAMING_SNAKE_CASE")]
+#[pyclass(rename_all = "SCREAMING_SNAKE_CASE", from_py_object)]
 #[derive(Debug, Clone)]
 pub enum MetadataType {
     Unknown = 0,
@@ -28,7 +28,7 @@ impl From<MetadataKind> for MetadataType {
     }
 }
 
-#[pyclass(rename_all = "SCREAMING_SNAKE_CASE")]
+#[pyclass(rename_all = "SCREAMING_SNAKE_CASE", from_py_object)]
 #[derive(Debug, Clone)]
 pub enum DataType {
     Unknown = 0,
@@ -48,7 +48,7 @@ impl From<DataChange> for DataType {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone)]
 pub struct ModifyDataEvent {
     #[pyo3(get)]
@@ -59,17 +59,17 @@ pub struct ModifyDataEvent {
 
 #[pymethods]
 impl ModifyDataEvent {
+    #[classattr]
+    #[allow(non_upper_case_globals)]
+    const __match_args__: (&'static str, &'static str) = ("path", "data_type");
+
     #[new]
     pub fn new(path: PathBuf, data_type: DataType) -> Self {
         Self { path, data_type }
     }
 
-    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
-        Ok(format!(
-            "ModifyDataEvent({:?}, {:?})",
-            slf.borrow().path,
-            slf.borrow().data_type,
-        ))
+    fn __repr__(&self) -> String {
+        format!("ModifyDataEvent({:?}, {:?})", self.path, self.data_type,)
     }
 }
 
@@ -80,7 +80,7 @@ pub fn from_data_kind(path: PathBuf, data_kind: DataChange) -> ModifyDataEvent {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone)]
 pub struct ModifyMetadataEvent {
     #[pyo3(get)]
@@ -91,17 +91,17 @@ pub struct ModifyMetadataEvent {
 
 #[pymethods]
 impl ModifyMetadataEvent {
+    #[classattr]
+    #[allow(non_upper_case_globals)]
+    const __match_args__: (&'static str, &'static str) = ("path", "metadata_type");
+
     #[new]
     pub fn new(path: PathBuf, metadata_type: MetadataType) -> Self {
         Self { path, metadata_type }
     }
 
-    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
-        Ok(format!(
-            "ModifyMetadataEvent({:?}, {:?})",
-            slf.borrow().path,
-            slf.borrow().metadata_type,
-        ))
+    fn __repr__(&self) -> String {
+        format!("ModifyMetadataEvent({:?}, {:?})", self.path, self.metadata_type,)
     }
 }
 
@@ -112,7 +112,7 @@ pub fn from_metadata_kind(path: PathBuf, metadata_kind: MetadataKind) -> ModifyM
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone)]
 pub struct ModifyOtherEvent {
     #[pyo3(get)]
@@ -121,17 +121,21 @@ pub struct ModifyOtherEvent {
 
 #[pymethods]
 impl ModifyOtherEvent {
+    #[classattr]
+    #[allow(non_upper_case_globals)]
+    const __match_args__: (&'static str,) = ("path",);
+
     #[new]
     pub fn new(path: PathBuf) -> Self {
         Self { path }
     }
 
-    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
-        Ok(format!("ModifyOtherEvent({:?})", slf.borrow().path,))
+    fn __repr__(&self) -> String {
+        format!("ModifyOtherEvent({:?})", self.path)
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone)]
 pub struct ModifyUnknownEvent {
     #[pyo3(get)]
@@ -140,12 +144,16 @@ pub struct ModifyUnknownEvent {
 
 #[pymethods]
 impl ModifyUnknownEvent {
+    #[classattr]
+    #[allow(non_upper_case_globals)]
+    const __match_args__: (&'static str,) = ("path",);
+
     #[new]
     pub fn new(path: PathBuf) -> Self {
         Self { path }
     }
 
-    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
-        Ok(format!("ModifyUnknownEvent({:?})", slf.borrow().path,))
+    fn __repr__(&self) -> String {
+        format!("ModifyUnknownEvent({:?})", self.path)
     }
 }

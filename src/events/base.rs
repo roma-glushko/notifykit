@@ -2,7 +2,7 @@ use notify::event::{CreateKind, RemoveKind};
 use pyo3::prelude::*;
 use std::convert::From;
 
-#[pyclass(rename_all = "SCREAMING_SNAKE_CASE")]
+#[pyclass(rename_all = "SCREAMING_SNAKE_CASE", from_py_object)]
 #[derive(Debug, Clone)]
 pub enum ObjectType {
     Unknown = 0,
