@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use pyo3::conversion::IntoPyObject;
 use pyo3::prelude::*;
 
@@ -18,6 +20,22 @@ pub enum EventType {
     ModifyUnknown(modify::ModifyUnknownEvent),
     ModifyOther(modify::ModifyOtherEvent),
     Rename(rename::RenameEvent),
+}
+
+impl EventType {
+    /// Returns the path for non-rename events, or `None` for rename events.
+    pub fn path(&self) -> Option<&Path> {
+        match self {
+            EventType::Access(e) => Some(&e.path),
+            EventType::Create(e) => Some(&e.path),
+            EventType::Delete(e) => Some(&e.path),
+            EventType::ModifyMetadata(e) => Some(&e.path),
+            EventType::ModifyData(e) => Some(&e.path),
+            EventType::ModifyUnknown(e) => Some(&e.path),
+            EventType::ModifyOther(e) => Some(&e.path),
+            EventType::Rename(_) => None,
+        }
+    }
 }
 
 impl<'py> IntoPyObject<'py> for &EventType {

@@ -20,6 +20,7 @@ file-id = "0.2.3"
 walkdir = "2.5.0"
 pyo3-async-runtimes = { version = "0.28.0", features = ["tokio-runtime"] }
 tokio = { version = "1.49.0", features = ["rt-multi-thread", "time", "macros", "sync"] }
+regex = "1"
 
 [lib]
 name = "_notifykit_lib"
