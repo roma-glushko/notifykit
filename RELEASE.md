@@ -2,7 +2,15 @@
 
 In order to release a new version of `notifykit`, follow these steps:
 
-- bump the version in `pyproject.toml` and `Cargo.toml`. Merge the update into `main`.
+- bump the version in `pyproject.toml` and `Cargo.toml`.
+- Update lock files:
+
+```bash
+uv lock
+cargo update
+```
+
+- Merge the update into `main`.
 - create a new tag with the version number, e.g. `0.0.9-alpha.1` and push it e.g.
 
 ```bash
