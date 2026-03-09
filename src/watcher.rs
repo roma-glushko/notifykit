@@ -96,6 +96,7 @@ impl Watcher {
             RecursiveMode::NonRecursive
         };
 
+        let mut watcher_paths = self.inner.paths_mut();
         for p in paths {
             let path = PathBuf::from(&p);
 
@@ -106,7 +107,7 @@ impl Watcher {
                 )));
             }
 
-            let result = self.inner.watch(&path, mode);
+            let result = watcher_paths.add(Path::new(&p), mode);
 
             if let Err(err) = result {
                 if !ignore_perm {
@@ -115,6 +116,10 @@ impl Watcher {
             }
 
             // self.file_cache.add_root(path, mode);
+        }
+
+        if let Err(err) = watcher_paths.commit() {
+            return Err(map_notify_error(err));
         }
 
         if self.debug {
