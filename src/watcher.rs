@@ -24,6 +24,9 @@ use crate::processor::{BatchProcessor, EventProcessor, RawEvent};
 
 pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
 
+type TimestampedEvent = (Instant, Result<Event, notify::Error>);
+type EventReceiver = mpsc::Receiver<TimestampedEvent>;
+
 #[derive(Debug)]
 pub(crate) struct Watcher {
     debug: bool,
@@ -31,8 +34,8 @@ pub(crate) struct Watcher {
     buffering_duration: Duration,
     inner: RecommendedWatcher,
     // file_cache: FileCache,
-    event_rx: Option<mpsc::Receiver<(Instant, Result<Event, notify::Error>)>>,
-    rx_return: Option<oneshot::Receiver<mpsc::Receiver<(Instant, Result<Event, notify::Error>)>>>,
+    event_rx: Option<EventReceiver>,
+    rx_return: Option<oneshot::Receiver<EventReceiver>>,
     tx: broadcast::Sender<Vec<EventType>>,
     stop_tx: Option<oneshot::Sender<()>>,
     drain_handle: Option<tokio::task::JoinHandle<()>>,
