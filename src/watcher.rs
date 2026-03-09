@@ -38,7 +38,12 @@ pub(crate) struct Watcher {
 }
 
 impl Watcher {
-    pub fn new(buffering_time_ms: u64, event_buffer_size: usize, debug: bool) -> Result<Self, notify::Error> {
+    pub fn new(
+        buffering_time_ms: u64,
+        event_buffer_size: usize,
+        debug: bool,
+        follow_symlinks: bool,
+    ) -> Result<Self, notify::Error> {
         // TODO: hide usage of file cache from Watcher
         // let file_cache = FileCache::new();
         // let file_cache_c = file_cache.clone();
@@ -48,6 +53,8 @@ impl Watcher {
         let processor_c = processor.clone();
 
         let (tx, _rx) = broadcast::channel::<Vec<EventType>>(event_buffer_size);
+
+        let config = notify::Config::default().with_follow_symlinks(follow_symlinks);
 
         let inner = RecommendedWatcher::new(
             move |e: Result<Event, notify::Error>| {
@@ -68,7 +75,7 @@ impl Watcher {
                     Err(e) => event_processor.add_error(e),
                 }
             },
-            notify::Config::default(),
+            config,
         )?;
 
         Ok(Self {

@@ -31,9 +31,9 @@ pub struct WatcherWrapper {
 #[pymethods]
 impl WatcherWrapper {
     #[new]
-    fn __init__(debounce_ms: u64, event_buffer_size: usize, debug: bool) -> PyResult<Self> {
-        let inner =
-            Watcher::new(debounce_ms, event_buffer_size, debug).map_err(|e| PyOSError::new_err(e.to_string()))?;
+    fn __init__(debounce_ms: u64, event_buffer_size: usize, debug: bool, follow_symlinks: bool) -> PyResult<Self> {
+        let inner = Watcher::new(debounce_ms, event_buffer_size, debug, follow_symlinks)
+            .map_err(|e| PyOSError::new_err(e.to_string()))?;
 
         Ok(WatcherWrapper {
             inner: Arc::new(Mutex::new(inner)),
