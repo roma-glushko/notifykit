@@ -1,6 +1,5 @@
 use std::io::ErrorKind as IOErrorKind;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use crate::events::EventType;
@@ -32,7 +31,8 @@ pub(crate) struct Watcher {
     buffering_duration: Duration,
     inner: RecommendedWatcher,
     // file_cache: FileCache,
-    event_rx: Arc<Mutex<mpsc::UnboundedReceiver<Result<Event, notify::Error>>>>,
+    event_rx: Option<mpsc::Receiver<Result<Event, notify::Error>>>,
+    rx_return: Option<oneshot::Receiver<mpsc::Receiver<Result<Event, notify::Error>>>>,
     tx: broadcast::Sender<Vec<EventType>>,
     stop_tx: Option<oneshot::Sender<()>>,
     drain_handle: Option<tokio::task::JoinHandle<()>>,
@@ -46,7 +46,7 @@ impl Watcher {
         follow_symlinks: bool,
     ) -> Result<Self, notify::Error> {
         let buffering_duration = Duration::from_millis(buffering_time_ms);
-        let (event_tx, event_rx) = mpsc::unbounded_channel();
+        let (event_tx, event_rx) = mpsc::channel(event_buffer_size);
 
         let (tx, _rx) = broadcast::channel::<Vec<EventType>>(event_buffer_size);
 
@@ -57,8 +57,8 @@ impl Watcher {
                 if debug {
                     println!("raw event: {:?}", e);
                 }
-                if let Err(e) = event_tx.send(e) {
-                    eprintln!("failed to send event: {e}");
+                if let Err(e) = event_tx.try_send(e) {
+                    eprintln!("event channel full or closed, dropping event: {e}");
                 }
             },
             config,
@@ -69,7 +69,8 @@ impl Watcher {
             event_buffer_size,
             buffering_duration,
             inner,
-            event_rx: Arc::new(Mutex::new(event_rx)),
+            event_rx: Some(event_rx),
+            rx_return: None,
             tx,
             stop_tx: None,
             drain_handle: None,
@@ -136,12 +137,22 @@ impl Watcher {
             let _ = tx.send(());
         }
 
+        self.recover_event_rx();
+
+        let (new_tx, _rx) = broadcast::channel::<Vec<EventType>>(self.event_buffer_size);
+        self.tx = new_tx;
+    }
+
+    fn recover_event_rx(&mut self) {
         if let Some(handle) = self.drain_handle.take() {
             handle.abort();
         }
 
-        let (new_tx, _rx) = broadcast::channel::<Vec<EventType>>(self.event_buffer_size);
-        self.tx = new_tx;
+        if let Some(mut rx_return) = self.rx_return.take() {
+            if let Ok(rx) = rx_return.try_recv() {
+                self.event_rx = Some(rx);
+            }
+        }
     }
 
     pub fn start_drain(&mut self, tick_duration: Duration, event_filter: Option<EventFilter>) {
@@ -149,14 +160,19 @@ impl Watcher {
             let _ = tx.send(());
         }
 
-        if let Some(handle) = self.drain_handle.take() {
-            handle.abort();
-        }
+        self.recover_event_rx();
+
+        let mut event_rx = match self.event_rx.take() {
+            Some(rx) => rx,
+            None => return,
+        };
 
         let (stop_tx, mut stop_rx) = oneshot::channel();
         self.stop_tx = Some(stop_tx);
 
-        let event_rx = Arc::clone(&self.event_rx);
+        let (rx_return_tx, rx_return_rx) = oneshot::channel();
+        self.rx_return = Some(rx_return_rx);
+
         let tx = self.tx.clone();
         let debug = self.debug;
         let buffering_duration = self.buffering_duration;
@@ -169,12 +185,10 @@ impl Watcher {
                 tokio::select! {
                     _ = &mut stop_rx => break,
                     _ = ticker.tick() => {
-                        if let Ok(mut rx) = event_rx.lock() {
-                            while let Ok(result) = rx.try_recv() {
-                                match result {
-                                    Ok(event) => processor.add_event(event),
-                                    Err(error) => processor.add_error(error),
-                                }
+                        while let Ok(result) = event_rx.try_recv() {
+                            match result {
+                                Ok(event) => processor.add_event(event),
+                                Err(error) => processor.add_error(error),
                             }
                         }
 
@@ -206,6 +220,8 @@ impl Watcher {
                     }
                 }
             }
+
+            let _ = rx_return_tx.send(event_rx);
         }));
     }
 
