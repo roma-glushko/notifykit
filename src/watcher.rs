@@ -16,7 +16,7 @@ use notify::{
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyOSError, PyPermissionError};
 use pyo3::prelude::*;
 use tokio::{
-    sync::{broadcast, oneshot},
+    sync::{broadcast, mpsc, oneshot},
     time,
 };
 // use crate::file_cache::FileCache;
@@ -29,9 +29,10 @@ pyo3::create_exception!(_inotify_toolkit_lib, WatcherError, PyException);
 pub(crate) struct Watcher {
     debug: bool,
     event_buffer_size: usize,
+    buffering_duration: Duration,
     inner: RecommendedWatcher,
     // file_cache: FileCache,
-    processor: Arc<Mutex<BatchProcessor>>, // TODO: use the EventProcessor trait instead
+    event_rx: Arc<Mutex<mpsc::UnboundedReceiver<Result<Event, notify::Error>>>>,
     tx: broadcast::Sender<Vec<EventType>>,
     stop_tx: Option<oneshot::Sender<()>>,
     drain_handle: Option<tokio::task::JoinHandle<()>>,
@@ -44,13 +45,8 @@ impl Watcher {
         debug: bool,
         follow_symlinks: bool,
     ) -> Result<Self, notify::Error> {
-        // TODO: hide usage of file cache from Watcher
-        // let file_cache = FileCache::new();
-        // let file_cache_c = file_cache.clone();
-
         let buffering_duration = Duration::from_millis(buffering_time_ms);
-        let processor = Arc::new(Mutex::new(BatchProcessor::new(buffering_duration)));
-        let processor_c = processor.clone();
+        let (event_tx, event_rx) = mpsc::unbounded_channel();
 
         let (tx, _rx) = broadcast::channel::<Vec<EventType>>(event_buffer_size);
 
@@ -58,21 +54,11 @@ impl Watcher {
 
         let inner = RecommendedWatcher::new(
             move |e: Result<Event, notify::Error>| {
-                let mut event_processor = match processor_c.lock() {
-                    Ok(guard) => guard,
-                    Err(e) => {
-                        eprintln!("notifykit: event processor lock poisoned, dropping event: {e}");
-                        return;
-                    }
-                };
-
                 if debug {
                     println!("raw event: {:?}", e);
                 }
-
-                match e {
-                    Ok(e) => event_processor.add_event(e),
-                    Err(e) => event_processor.add_error(e),
+                if let Err(e) = event_tx.send(e) {
+                    eprintln!("failed to send event: {e}");
                 }
             },
             config,
@@ -81,8 +67,9 @@ impl Watcher {
         Ok(Self {
             debug,
             event_buffer_size,
+            buffering_duration,
             inner,
-            processor,
+            event_rx: Arc::new(Mutex::new(event_rx)),
             tx,
             stop_tx: None,
             drain_handle: None,
@@ -157,7 +144,7 @@ impl Watcher {
         self.tx = new_tx;
     }
 
-    pub fn start_drain(&mut self, debounce_delay: Duration, event_filter: Option<EventFilter>) {
+    pub fn start_drain(&mut self, tick_duration: Duration, event_filter: Option<EventFilter>) {
         if let Some(tx) = self.stop_tx.take() {
             let _ = tx.send(());
         }
@@ -169,27 +156,31 @@ impl Watcher {
         let (stop_tx, mut stop_rx) = oneshot::channel();
         self.stop_tx = Some(stop_tx);
 
-        let proc = Arc::clone(&self.processor);
+        let event_rx = Arc::clone(&self.event_rx);
         let tx = self.tx.clone();
         let debug = self.debug;
+        let buffering_duration = self.buffering_duration;
 
         self.drain_handle = Some(pyo3_async_runtimes::tokio::get_runtime().spawn(async move {
-            let mut ticker = time::interval(debounce_delay);
+            let mut processor = BatchProcessor::new(buffering_duration);
+            let mut ticker = time::interval(tick_duration);
 
             loop {
                 tokio::select! {
                     _ = &mut stop_rx => break,
                     _ = ticker.tick() => {
-                        let (raw, errs) = {
-                            let mut p = match proc.lock() {
-                                Ok(guard) => guard,
-                                Err(e) => {
-                                    eprintln!("notifykit: event processor lock poisoned, skipping drain tick: {e}");
-                                    continue;
+                        if let Ok(mut rx) = event_rx.lock() {
+                            while let Ok(result) = rx.try_recv() {
+                                match result {
+                                    Ok(event) => processor.add_event(event),
+                                    Err(error) => processor.add_error(error),
                                 }
-                            };
-                            (p.get_events(), p.get_errors())
-                        };
+                            }
+                        }
+
+                        let raw = processor.get_events();
+                        let errs = processor.get_errors();
+
                         if debug && !raw.is_empty() { println!("processed: {:?}", raw); }
                         if !errs.is_empty() { eprintln!("errors: {:?}", errs); }
                         if raw.is_empty() { continue; }
@@ -207,7 +198,11 @@ impl Watcher {
                             }
                         }
 
-                        if !batch.is_empty() { let _ = tx.send(batch); }
+                        if !batch.is_empty() {
+                            if let Err(e) = tx.send(batch) {
+                                eprintln!("failed to broadcast events: {e}");
+                            }
+                        }
                     }
                 }
             }
