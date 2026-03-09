@@ -110,6 +110,7 @@ jobs:
           args: --release --out dist
           sccache: 'true'
           manylinux: ${{ matrix.manylinux || 'auto' }}
+          rust-toolchain: '1.85'
 
       - name: Build PyPy wheels
         if: ${{ matrix.manylinux == 'auto' && (matrix.target == 'x86_64' || matrix.target == 'aarch64') }}
@@ -119,6 +120,7 @@ jobs:
           sccache: 'true'
           manylinux: ${{ matrix.manylinux || 'auto' }}
           args: --release --out dist --interpreter pypy3.11
+          rust-toolchain: '1.85'
 
       - run: ls -lah dist/
 
@@ -148,6 +150,7 @@ jobs:
           target: ${{ matrix.target }}
           args: --release --out dist
           sccache: 'true'
+          rust-toolchain: '1.85'
 
       - name: Build PyPy wheels
         if: ${{ matrix.target == 'x86_64' }}
@@ -155,6 +158,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
           args: --release --out dist --interpreter pypy3.11
+          rust-toolchain: '1.85'
 
       - run: ls -lah dist/
 
@@ -185,6 +189,7 @@ jobs:
           target: ${{ matrix.target }}
           args: --release --out dist
           sccache: 'true'
+          rust-toolchain: '1.85'
 
       - run: dir dist/
 
@@ -205,6 +210,7 @@ jobs:
         with:
           command: sdist
           args: --out dist
+          rust-toolchain: '1.85'
 
       - name: Upload sdist
         uses: actions/upload-artifact@v4
