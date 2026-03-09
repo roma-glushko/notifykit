@@ -1,6 +1,6 @@
 use std::io::ErrorKind as IOErrorKind;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::events::EventType;
 use crate::events::access::from_access_kind;
@@ -31,8 +31,8 @@ pub(crate) struct Watcher {
     buffering_duration: Duration,
     inner: RecommendedWatcher,
     // file_cache: FileCache,
-    event_rx: Option<mpsc::Receiver<Result<Event, notify::Error>>>,
-    rx_return: Option<oneshot::Receiver<mpsc::Receiver<Result<Event, notify::Error>>>>,
+    event_rx: Option<mpsc::Receiver<(Instant, Result<Event, notify::Error>)>>,
+    rx_return: Option<oneshot::Receiver<mpsc::Receiver<(Instant, Result<Event, notify::Error>)>>>,
     tx: broadcast::Sender<Vec<EventType>>,
     stop_tx: Option<oneshot::Sender<()>>,
     drain_handle: Option<tokio::task::JoinHandle<()>>,
@@ -57,7 +57,7 @@ impl Watcher {
                 if debug {
                     println!("raw event: {:?}", e);
                 }
-                if let Err(e) = event_tx.try_send(e) {
+                if let Err(e) = event_tx.try_send((Instant::now(), e)) {
                     eprintln!("event channel full or closed, dropping event: {e}");
                 }
             },
@@ -185,9 +185,9 @@ impl Watcher {
                 tokio::select! {
                     _ = &mut stop_rx => break,
                     _ = ticker.tick() => {
-                        while let Ok(result) = event_rx.try_recv() {
+                        while let Ok((time, result)) = event_rx.try_recv() {
                             match result {
-                                Ok(event) => processor.add_event(event),
+                                Ok(event) => processor.add_event(event, time),
                                 Err(error) => processor.add_error(error),
                             }
                         }

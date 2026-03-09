@@ -89,7 +89,7 @@ impl FileEventQueue {
 pub(crate) trait EventProcessor {
     fn get_events(&mut self) -> Vec<RawEvent>;
     fn get_errors(&mut self) -> Vec<NotifyError>;
-    fn add_event(&mut self, event: NotifyEvent);
+    fn add_event(&mut self, event: NotifyEvent, time: Instant);
     fn add_error(&mut self, error: NotifyError);
 }
 
@@ -117,8 +117,7 @@ impl<T: FileIdCache> CrossPlatformEventProcessor<T> {
         }
     }
 
-    fn handle_rename_from(&mut self, event: NotifyEvent) {
-        let time = Instant::now();
+    fn handle_rename_from(&mut self, event: NotifyEvent, time: Instant) {
         let path = &event.paths[0];
 
         // store event
@@ -130,7 +129,7 @@ impl<T: FileIdCache> CrossPlatformEventProcessor<T> {
         self.push_event(event, time);
     }
 
-    fn handle_rename_to(&mut self, event: NotifyEvent) {
+    fn handle_rename_to(&mut self, event: NotifyEvent, time: Instant) {
         self.file_cache.add_path(&event.paths[0]);
 
         let trackers_match = self
@@ -155,11 +154,11 @@ impl<T: FileIdCache> CrossPlatformEventProcessor<T> {
             // connect rename
             let (mut rename_event, _) = self.rename_event.take().unwrap(); // unwrap is safe because `rename_event` must be set at this point
             let path = rename_event.paths.remove(0);
-            let time = rename_event.time;
-            self.push_rename_event(path, event, time);
+            let rename_time = rename_event.time;
+            self.push_rename_event(path, event, rename_time);
         } else {
             // move in
-            self.push_event(event, Instant::now());
+            self.push_event(event, time);
         }
 
         self.rename_event = None;
@@ -351,12 +350,12 @@ impl<T: FileIdCache> EventProcessor for CrossPlatformEventProcessor<T> {
     }
 
     /// Add new event to debouncer cache
-    fn add_event(&mut self, event: NotifyEvent) {
+    fn add_event(&mut self, event: NotifyEvent, time: Instant) {
         // log::trace!("raw event: {event:?}");
 
         if event.need_rescan() {
             self.file_cache.rescan();
-            self.rescan_event = Some(event.into());
+            self.rescan_event = Some(RawEvent::new(event, time));
             return;
         }
 
@@ -366,22 +365,22 @@ impl<T: FileIdCache> EventProcessor for CrossPlatformEventProcessor<T> {
             EventKind::Create(_) => {
                 self.file_cache.add_path(path);
 
-                self.push_event(event, Instant::now());
+                self.push_event(event, time);
             }
             EventKind::Modify(ModifyKind::Name(rename_mode)) => {
                 match rename_mode {
                     RenameMode::Any => {
                         if event.paths[0].exists() {
-                            self.handle_rename_to(event);
+                            self.handle_rename_to(event, time);
                         } else {
-                            self.handle_rename_from(event);
+                            self.handle_rename_from(event, time);
                         }
                     }
                     RenameMode::To => {
-                        self.handle_rename_to(event);
+                        self.handle_rename_to(event, time);
                     }
                     RenameMode::From => {
-                        self.handle_rename_from(event);
+                        self.handle_rename_from(event, time);
                     }
                     RenameMode::Both => {
                         // ignore and handle `To` and `From` events instead
@@ -392,7 +391,7 @@ impl<T: FileIdCache> EventProcessor for CrossPlatformEventProcessor<T> {
                 }
             }
             EventKind::Remove(_) => {
-                self.push_remove_event(event, Instant::now());
+                self.push_remove_event(event, time);
             }
             EventKind::Other => {
                 // ignore meta events
@@ -402,7 +401,7 @@ impl<T: FileIdCache> EventProcessor for CrossPlatformEventProcessor<T> {
                     self.file_cache.add_path(path);
                 }
 
-                self.push_event(event, Instant::now());
+                self.push_event(event, time);
             }
         }
     }
@@ -458,8 +457,8 @@ impl EventProcessor for BatchProcessor {
         std::mem::take(&mut self.errors)
     }
 
-    fn add_event(&mut self, event: NotifyEvent) {
-        self.events.push(RawEvent::new(event, Instant::now()));
+    fn add_event(&mut self, event: NotifyEvent, time: Instant) {
+        self.events.push(RawEvent::new(event, time));
     }
 
     fn add_error(&mut self, error: NotifyError) {
