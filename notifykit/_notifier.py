@@ -37,13 +37,14 @@ class Notifier:
         tick_ms: int = 50,
         event_buffer_size: int = 1024,
         debug: bool = False,
+        follow_symlinks: bool = True,
         filter: Optional[EventFilter] = None,
     ) -> None:
         self._debounce_ms = debounce_ms
         self._tick_ms = tick_ms
         self._debug = debug
 
-        self._watcher = WatcherWrapper(debounce_ms, event_buffer_size, debug)
+        self._watcher = WatcherWrapper(debounce_ms, event_buffer_size, debug, follow_symlinks)
 
         # Extract filter config to pass to the Rust side
         if filter is not None:
