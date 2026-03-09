@@ -111,7 +111,9 @@ impl Watcher {
             // self.file_cache.add_root(path, mode);
         }
 
-        watcher_paths.commit().ok();
+        if let Err(err) = watcher_paths.commit() {
+            return Err(map_notify_error(err));
+        }
 
         if self.debug {
             println!("watcher: {:?}", self.inner);
